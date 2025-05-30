@@ -16,6 +16,8 @@
   # 7. estimate volume of energy wood from crown
   # 8. Make neat conclusion table
 
+  # TO DO: expand to work with multiple trees at once
+
 
 ############################ 1. Prerequisites ##################################
 
