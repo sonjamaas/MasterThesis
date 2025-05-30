@@ -1,0 +1,592 @@
+################################################################################
+#### Script for extracting the main stem of a tree and assessing its quality ###
+################################################################################
+
+
+
+################################ Workflow ######################################
+  
+  # 1. Prerequisites
+  # 2. Build aRchi object point cloud
+  # 3. extract main stem
+  # 4. segment main stem into parts with one-sided curvature and DBH > 15cm
+  # 5. assess quality and volume of stem segments based on curvature & branches
+  # 6. extract crown from aRchi object
+  # 7. estimate volume of energy wood from crown
+
+
+
+############################ 1. Prerequisites ##################################
+
+  # load required libraries
+  library(aRchi)
+  library(lidR)
+  library(rgl)
+  library(scatterplot3d)
+  library(alphashape3d)
+  
+  # Load .las file
+  setwd("F:/Sonja/Msc_Thesis/data/9_individualTrees/")
+  las <- readLAS("tree45.las")
+  tree_i <- 45
+  
+  # remove unneccesary columns (for faster processing)
+  las@data[,4:15] <- NULL
+
+  
+  
+##################### 2. Build aRchi object from point cloud ###################
+
+  # Build aRchi object
+  archi <- build_aRchi()
+  archi <- add_pointcloud(archi, point_cloud = las)
+
+  # skeletonize aRchi object and add radius
+  archi <- skeletonize_pc(archi, D = 0.5, cl_dist = 0.1, max_d = 1, 
+                          progressive = TRUE)
+  archi <- add_radius(archi, sec_length = 0.5, by_axis = TRUE, 
+                      method = "median")
+
+  # Extract QSM table
+  qsm_table <- archi@QSM
+
+  
+
+############ 3. Identify main stem (axis_ID == 1) and extract points ###########
+
+  # subset the qsm table for main axis
+  main_stem <- subset(qsm_table, axis_ID == 1)  # or use order == 1 if available
+
+  # Extract start/end coordinates of main stem cylinders
+  main_stem_points <- rbind(
+    as.matrix(main_stem[, c("startX", "startY", "startZ")]),
+    as.matrix(main_stem[, c("endX", "endY", "endZ")])
+  )
+  
+  # Remove duplicates (if needed)
+  main_stem_points <- unique(main_stem_points)
+
+  # Plot main stem axis to check for correctness
+  plot <- scatterplot3d(main_stem_points,
+                color = "red",
+                pch = 16,
+                main = "Main Stem Axis",
+                xlab = "X", ylab = "Y", zlab = "Z")
+  
+  # Add original point cloud in background (grey)
+  original_points <- as.matrix(archi@pointcloud@data[, c("X", "Y", "Z")])
+  plot$points3d(original_points,
+                color = "grey")
+  
+  # get all "stem" points from original cloud
+  # Get original point cloud as a matrix
+  pc <- as.matrix(archi@pointcloud@data[, c("X", "Y", "Z")])
+  # summary(pc)
+  
+  # Function to check if points are within a cylinder
+  points_in_cylinder <- function(points, start, end, radius, buffer = 0) {
+    # Vector along axis
+    axis_vec <- end - start
+    axis_len <- sqrt(sum(axis_vec^2))
+    if (axis_len < 1e-6) return(rep(FALSE, nrow(points))) # skip degenerate
+    axis_unit <- axis_vec / axis_len
+    
+    v <- sweep(points, 2, start) # points - start
+    t_proj <- v %*% axis_unit    # projection along axis
+    
+    # Points within the length of the cylinder
+    mask_length <- (t_proj >= 0) & (t_proj <= axis_len)
+    
+    # Closest point on axis to each point
+    closest <- sweep(matrix(t_proj, ncol=1) %*% t(axis_unit), 2, start, "+")
+    dist_to_axis <- sqrt(rowSums((points - closest)^2))
+    mask_radius <- dist_to_axis <= (radius + buffer)
+    
+    mask <- mask_length & mask_radius
+    
+    return(mask)
+  }
+  
+  # generate empty matrix
+  in_main_axis <- rep(FALSE, nrow(pc))
+  
+  # check if points are within the determined main axis cylinders
+  for (i in seq_len(nrow(main_stem))) {
+    cyl <- main_stem[i, ]
+    start <- as.numeric(c(cyl$startX, cyl$startY, cyl$startZ))
+    end <- as.numeric(c(cyl$endX, cyl$endY, cyl$endZ))
+    radius <- cyl$radius_cyl
+    axis_vec <- end - start
+    axis_len <- sqrt(sum(axis_vec^2))
+    if (axis_len < 1e-6) next  # skip degenerate cylinders
+    mask <- points_in_cylinder(pc, start, end, radius, buffer = 0.01)
+    cat("Cylinder", i, "selected", sum(mask), "points\n")
+    in_main_axis <- in_main_axis | mask
+  }
+  
+  # gather main axis points
+  stem_points <- pc[in_main_axis, ]
+  
+  cat("Total main axis points found:", nrow(main_axis_points), "\n")
+  
+  # plot the points in 3d
+  open3d()
+  plot3d(main_axis_points, col = "red", size = 3) # main axis points
+  points3d(pc, col = "grey", alpha = 0.5, size = 2) # rest of the point cloud
+
+  
+  ### filter outliers to correct possible errors in clustering
+  
+  # Convert to data frame for easier processing
+  stem_points_df <- as.data.frame(stem_points)
+  
+  # Compute Mahalanobis distances
+  mean_vals <- colMeans(stem_points_df)
+  cov_matrix <- cov(stem_points_df)
+  distances <- mahalanobis(stem_points_df, mean_vals, cov_matrix)
+  
+  # Set a threshold (e.g., 95th percentile)
+  threshold <- quantile(distances, 0.95)
+  filtered_stem_points <- stem_points_df[distances < threshold, ]
+  
+  # Plot filtered points
+  # plot3d(filtered_stem_points, col = "blue", size = 3)
+  
+  # convert to matrix again
+  stem_points <- as.matrix(filtered_stem_points)
+  
+############################# 4. Segment stem points ###########################
+
+
+  ## 4.1 PCA for main stem axis ##
+  
+    # find the dominant direction of the data which corresponds with the general 
+    # orientation of the stem, enabling to analyze the trees shape independently 
+    # of its initial orientation in the data set.
+    
+    # Principal component analysis
+    pca <- prcomp(stem_points, center = TRUE)
+    axis_vector <- pca$rotation[,1]
+    stem_center <- colMeans(stem_points)
+    
+    # Project stem points onto PCA axis to simplify curvature analysis and allow 
+    # to sort points by height.
+    projected_points <- apply(stem_points, 1, function(pt) {
+      t <- sum((pt - stem_center) * axis_vector)
+      stem_center + t * axis_vector
+    })
+    projected_points <- t(projected_points)
+  
+  
+  ## 4.2 Sort stem points by height for segmentation ##
+  
+    sorted_indices <- order(stem_points[,3])  # Sort by Z (height)
+    stem_sorted <- stem_points[sorted_indices, ]
+    projected_sorted <- projected_points[sorted_indices, ]
+    
+  
+  ## 4.3 Compute local curvature ##
+  
+    deviations <- stem_sorted[,1:2] - projected_sorted[,1:2]  # XY-plane dev.
+    signed_curvature <- deviations[,1] * axis_vector[2] - 
+      deviations[,2] * axis_vector[1]  # Signed curvature in 2D
+    
+    smooth_curvature <- function(curvature, window = 5) {
+      filter(curvature, rep(1 / window, window), sides = 2)
+    }
+    
+    # Apply smoothing 
+    # smoothed_curvature <- smooth_curvature(signed_curvature, window = 5)
+    
+  
+  ## 4.4 Segment the stem into sections with constant curvature sign ##
+  
+    # Points where curvature sign changes
+    # change_points <- which(diff(sign(smoothed_curvature)) != 0) 
+    
+    # without smoothing
+    change_points <- which(diff(sign(signed_curvature)) != 0) 
+    
+    # Start and end of segments
+    segment_indices <- c(1, change_points, nrow(stem_sorted))  
+    
+    # set minimum segment length (here: 3m, since its the min. sell-able length)
+    min_segment_length <- 3  
+    allowed_lengths <- c(3,4,6,10)
+    
+    # Initialize a new list of segment start indices
+    merged_segment_indices <- c(segment_indices[1])
+    
+    final_segments <- list()
+    i <- 2
+    
+    # set first branch variable to 0
+    first_branch <- 0
+    
+    # Define a threshold for branch detection (adjust as needed)
+    branch_threshold <- 0.33  # Adjust this 
+    
+    # segment the stem 
+    while (i < length(segment_indices)) {
+      start_idx <- segment_indices[i]
+      segment_length <- 0
+      j <- i  # Keep track of a separate index for merging
+      
+      while (j < length(segment_indices) && 
+             segment_length < min_segment_length) {
+        j <- j + 1
+        if (j > length(segment_indices)) break  # Prevent out-of-bounds indexing
+        end_idx <- segment_indices[j]
+        segment_length <- abs(
+          stem_sorted[end_idx, 3] - stem_sorted[start_idx, 3])
+      }
+      
+      # Find the closest allowed segment length (≥ 3m)
+      possible_lengths <- allowed_lengths[allowed_lengths >= segment_length]
+      if (length(possible_lengths) > 0 & segment_length >= 3) {
+        final_segments <- rbind(final_segments, c(start_idx, end_idx))
+      }
+      i <- j  # Move to the next unmerged segment
+    }
+    
+    # Convert to a proper list of indices
+    merged_segment_indices <- do.call(rbind, final_segments[,1])
+    merged_segment_indices <- unique(merged_segment_indices)
+    
+    # Assign new segment labels
+    segment_labels <- rep(0, nrow(stem_sorted))
+    
+    # Convert segment labels to positive integers
+    segment_labels <- as.integer(segment_labels) + 1  # Offset to avoid zeros
+    
+  
+  ## 4.5 Inialize functions ##
+  
+    # Function to fit a circle to 2D points 
+    fitSS <- function(xy,
+                      a0=mean(xy[,1]),
+                      b0=mean(xy[,2]),
+                      r0 = mean(sqrt((xy[,1]-a0)^2 + (xy[,2]-b0)^2))){
+      SS <- function(abr){
+        sum((abr[3] - sqrt((xy[,1]-abr[1])^2 + (xy[,2]-abr[2])^2))^2)
+      }
+      optim(c(a0,b0,r0), SS)
+    }
+    
+    # Function to compute radial variance
+    compute_radial_variance <- function(points, x_center, y_center) {
+      # Compute distances of points from the estimated center
+      distances <- sqrt((points[,1] - x_center)^2 + (points[,2] - y_center)^2)
+      
+      # Compute mean radius
+      mean_radius <- mean(distances)
+      
+      # Compute radial variance
+      radial_variance <- mean((distances - mean_radius)^2)
+      
+      return(radial_variance)
+    }
+    
+    # functions to sort segments into RVR classes
+    rvr_classification <- function(Length, Max_Deviation, Diameter_noBark){
+      class_curve <- ""
+      if((Max_Deviation/Length) <= 0.02){
+        class <- "A"
+      } else if((Max_Deviation/Length) > 0.02 & 
+                (Max_Deviation/Length) <= 0.03){
+        class <- "B"
+      } else if((Max_Deviation/Length) > 0.03 & 
+                (Max_Deviation/Length) <= 0.04 & Diameter_noBark <= 0.49){
+        class <- "C"
+      }else if((Max_Deviation/Length) > 0.04 & 
+               (Max_Deviation/Length) <= 0.06 & Diameter_noBark >= 0.5){
+        class <- "C"
+      }else {class <- "D"}
+    }
+    
+    
+    # function to determine diameter class
+    diameter_classification <- function(Diameter_noBark){
+      if(Diameter_noBark < 0 ){
+        diameter_class <- NA
+      } else if(Diameter_noBark >= 0 & Diameter_noBark <= 0.09){
+        diameter_class <- "0"
+      } else if(Diameter_noBark > 0.09 & Diameter_noBark <= 0.14){
+        diameter_class <- "1a"
+      }else if(Diameter_noBark > 0.14 & Diameter_noBark <= 0.19){
+        diameter_class <- "1b"
+      }else if(Diameter_noBark > 0.19 & Diameter_noBark <= 0.24){
+        diameter_class <- "2a"
+      }else if(Diameter_noBark > 0.24 & Diameter_noBark <= 0.29){
+        diameter_class <- "2b"
+      }else if(Diameter_noBark > 0.29 & Diameter_noBark <= 0.34){
+        diameter_class <- "3a"
+      }else if(Diameter_noBark > 0.34 & Diameter_noBark <= 0.39){
+        diameter_class <- "3b"
+      }else if(Diameter_noBark > 0.39 & Diameter_noBark <= 0.49){
+        diameter_class <- "4"
+      }else if(Diameter_noBark > 0.49 & Diameter_noBark <= 0.59){
+        diameter_class <- "5"
+      }else if(Diameter_noBark > 0.59 & Diameter_noBark <= 0.69){
+        diameter_class <- "6"
+      }else if(Diameter_noBark > 0.69 & Diameter_noBark <= 0.79){
+        diameter_class <- "7"
+      } else { diameter_class <- "8"}
+    }
+
+  
+  ## 4.6 Compute segment parameters ##
+  
+    # initialize segment stats table
+    segment_stats <- data.frame(Segment = numeric(),
+                                Length = numeric(),
+                                Max_Deviation = numeric(), 
+                                Class_curve = character(),
+                                Start_Z = numeric(), End_Z = numeric(),
+                                Diameter = numeric(),
+                                Diameter_noBark = numeric(),
+                                Diameter_class = character(),
+                                FirstBranch_height = numeric(),
+                                radial_variance = numeric(),
+                                volume = numeric()
+    )
+    
+    # find center line of each stem segment and calculate parameters
+    for (i in 1:(length(merged_segment_indices)-1)){
+      
+      segment_i <- stem_sorted[
+        
+        merged_segment_indices[i]: merged_segment_indices[i+1],]
+      
+      # Define height slices
+      slice_heights <- seq(min(segment_i[,3]), max(segment_i[,3]), by = 0.1)  
+      
+      # initialize centerline dataframe
+      centerline <- data.frame(Z = numeric(), Xc = numeric(), Yc = numeric())
+      
+      # loop through slices 
+      for (h in slice_heights) {
+        slice <- subset(segment_i, 
+                        segment_i[,3] >= h - 0.1 & segment_i[,3] < h + 0.1)  
+        if (nrow(slice) > 3) {  # Ensure enough points for fitting
+          circle <- fitSS(slice)
+          center <- cbind(circle$par[[1]], circle$par[[2]])
+          centerline <- rbind(centerline, data.frame(Z = h, 
+                                                     Xc = center[1,1], 
+                                                     Yc = center[1,2]))
+        }
+      }
+      
+      # Create LAS data with RGB attributes for segment
+      las_data <- data.frame(
+        X = segment_i[,1],
+        Y = segment_i[,2],
+        Z = segment_i[,3]
+      )
+      
+      # Create LAS data with RGB attributes for center line
+      las_data2 <- data.frame(
+        X = centerline$Xc,
+        Y = centerline$Yc,
+        Z = centerline$Z
+      )
+      
+      # filter for outliers in data frame
+      Q1_x <- quantile(las_data2$X, .25)
+      Q3_x <- quantile(las_data2$X, .75)
+      IQR_x <- IQR(las_data2$X)
+      las_data2 <- subset(las_data2, las_data2$X > (Q1_x - 1.5*IQR_x) & 
+                            las_data2$X < (Q3_x + 1.5*IQR_x))
+      
+      
+      las_segment <- LAS(las_data)
+      las_centerline <- LAS(las_data2)
+      
+      
+      # write .las files to storage
+      writeLAS(las_segment, paste("tree_",tree_i, "_segment_", i, ".las"))
+      writeLAS(las_centerline, paste("tree_", tree_i, 
+                                     "_centerline_", i, ".las"))
+      
+      # compute segment parameters
+      segment_start <- merged_segment_indices[i]
+      segment_end <- merged_segment_indices[i+1]
+      
+      if (is.na(segment_start) | is.na(segment_end)) {
+        # print(paste("Warning: NA values found in segment indices at row", i))
+        next  # Skip this segment
+      }
+      
+      # calculate segment length
+      segment_length <- abs(
+        stem_sorted[segment_end, 3] - stem_sorted[segment_start, 3])
+      
+      # calculate segment diameter in the middle of the segment
+      mid_slice <- subset(segment_i, 
+                          segment_i[,3] >= (
+                            (stem_sorted[segment_end, 3] + 
+                               stem_sorted[segment_start,3])/2) - 
+                            0.1 & segment_i[,3] < (
+                              (stem_sorted[segment_end, 3] + 
+                                 stem_sorted[segment_start,3])/2) + 0.1)
+      
+      mid_circle <- fitSS(mid_slice)
+      diameter <- mid_circle[[1]][3]*2
+      
+      # calculate diameter without bark
+      diameter_noBark <- if (diameter <= 0.41){
+        diameter-0.01} else {diameter-0.02}
+      
+      # diameter class
+      diameter_class <- diameter_classification(diameter_noBark)
+      
+      # calculate Curvature as deviation from a straight line
+      if (nrow(centerline) > 2) {  # Ensure there are enough points 
+        
+        # First and last points of centerline
+        P1 <- as.numeric(centerline[1, c("Xc", "Yc", "Z")])
+        P2 <- as.numeric(centerline[nrow(centerline), c("Xc", "Yc", "Z")])
+        
+        # Compute distances of each centerline point to the line P1-P2
+        distances <- sapply(1:nrow(centerline), function(j) {
+          P <- as.numeric(centerline[j, c("Xc", "Yc", "Z")])
+          
+          # Vector representations
+          v <- P2 - P1  # Line direction vector
+          w <- P - P1   # Vector from P1 to P
+          
+          # Projection of w onto v
+          projection_factor <- sum(w * v) / sum(v * v)
+          projection <- P1 + projection_factor * v  # Closest point on the line
+          
+          # Perpendicular distance
+          sqrt(sum((P - projection)^2))
+        })
+        
+        # Maximum deviation
+        max_curvature <- max(distances, na.rm = TRUE)
+      }
+      
+      # calculate radial variance for each segment
+      radial_variance <- compute_radial_variance(mid_slice, mid_circle[[1]][1],
+                                                 mid_circle[[1]][2])
+      
+      # calculate volume of segment (fm)
+      segment_i_df <- as.data.frame(segment_i)  # Ensure it's a data frame
+      segment_i_df[, 1:3] <- sweep(segment_i_df[, 1:3], 2, 
+                                   colMeans(segment_i_df[, 1:3]), "-")
+      ashape <- ashape3d(as.matrix(segment_i_df), alpha = 1)
+      fm <- volume_ashape3d(ashape)
+      
+      
+      # rvr classification
+      class_curve <- rvr_classification(segment_length, 
+                                        max_curvature, 
+                                        diameter_noBark)
+      
+      
+      # make a plot to vizualise the stem segment cross section 
+      circlexy <- function(xyr, n=180){
+        theta = seq(0,2*pi,len=n)
+        cbind(xyr[1] + xyr[3]*cos(theta),
+              xyr[2] + xyr[3]*sin(theta)
+        )
+      }
+      plot(mid_slice,asp=1, main = paste("Centre cross-section of segment ", i), 
+           sub = paste("Length: ", segment_length, "m; Curve: ", 
+                       round(max_curvature, digits = 3), 
+                       "m; Diameter: ", round(diameter, digits = 3), "m"))
+      lines(circlexy(mid_circle$par))
+      
+      # collect segment stats in table
+      segment_stats <- rbind(segment_stats, data.frame(
+        Segment = i,
+        Length = segment_length,
+        Max_Deviation = max_curvature,
+        Class_curve = class_curve,
+        Start_Z = stem_sorted[segment_start, 3],
+        End_Z = stem_sorted[segment_end, 3],
+        Diameter = diameter,
+        Diameter_noBark = diameter_noBark,
+        Diameter_class = diameter_class,
+        # FirstBranch_height = first_branch,
+        radial_variance = round(radial_variance, digits = 10),
+        volume = fm
+      ))
+    } 
+    
+    print(segment_stats)
+    
+
+  # exclude everything smaller than 15cm and put it into crown volume
+  # add noise & outlier filter to remove other points than the ones belonging to the stem
+  
+  
+  
+########################### 6. Extract crown points ############################
+
+# Crown wood: all other axes/orders
+crown_wood <- subset(qsm_table, axis_ID != 1)
+
+# Volume of a cylinder: pi * (radius^2) * length
+main_stem$volume <- pi * (main_stem$radius^2) * main_stem$length
+main_stem_volume <- sum(main_stem$volume)
+
+crown_wood$volume <- pi * (crown_wood$radius^2) * crown_wood$length
+crown_wood_volume <- sum(crown_wood$volume)
+
+
+# Example for diameter class
+
+# function to determine diameter class
+diameter_classification <- function(Diameter_noBark){
+  if(Diameter_noBark < 0 ){
+    diameter_class <- NA
+  } else if(Diameter_noBark >= 0 & Diameter_noBark <= 0.09){
+    diameter_class <- "0"
+  } else if(Diameter_noBark > 0.9 & Diameter_noBark <= 0.14){
+    diameter_class <- "1a"
+  }else if(Diameter_noBark > 0.14 & Diameter_noBark <= 0.19){
+    diameter_class <- "1b"
+  }else if(Diameter_noBark > 0.19 & Diameter_noBark <= 0.24){
+    diameter_class <- "2a"
+  }else if(Diameter_noBark > 0.24 & Diameter_noBark <= 0.29){
+    diameter_class <- "2b"
+  }else if(Diameter_noBark > 0.29 & Diameter_noBark <= 0.34){
+    diameter_class <- "3a"
+  }else if(Diameter_noBark > 0.34 & Diameter_noBark <= 0.39){
+    diameter_class <- "3b"
+  }else if(Diameter_noBark > 0.39 & Diameter_noBark <= 0.49){
+    diameter_class <- "4"
+  }else if(Diameter_noBark > 0.49 & Diameter_noBark <= 0.59){
+    diameter_class <- "5"
+  }else if(Diameter_noBark > 0.59 & Diameter_noBark <= 0.69){
+    diameter_class <- "6"
+  }else if(Diameter_noBark > 0.69 & Diameter_noBark <= 0.79){
+    diameter_class <- "7"
+  } else { diameter_class <- "8"}
+}
+
+# functions to sort segments into RVR classes
+rvr_classification <- function(Length, Max_Deviation, Diameter_noBark){
+  class_curve <- ""
+  if((Max_Deviation/Length) <= 0.02){
+    class <- "A"
+  } else if((Max_Deviation/Length) > 0.02 & (Max_Deviation/Length) <= 0.03){
+    class <- "B"
+  } else if((Max_Deviation/Length) > 0.03 & (Max_Deviation/Length) <= 0.04 & Diameter_noBark <= 0.49){
+    class <- "C"
+  }else if((Max_Deviation/Length) > 0.04 & (Max_Deviation/Length) <= 0.06 & Diameter_noBark >= 0.5){
+    class <- "C"
+  }else {class <- "D"}
+}
+
+main_stem$diameter_noBark <- ifelse(main_stem$radius*2 <= 0.41, main_stem$radius*2-0.01, main_stem$radius*2-0.02)
+main_stem$diameter_class <- sapply(main_stem$diameter_noBark, diameter_classification)
+
+# Assign quality class (you may need to adapt this to your function’s input)
+main_stem$class_curve <- mapply(rvr_classification, 
+                                Length = main_stem$length, 
+                                Max_Deviation = rep(0, nrow(main_stem)),  # or compute from centerline if available
+                                Diameter_noBark = main_stem$diameter_noBark)
+plot(main_stem)
