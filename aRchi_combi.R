@@ -34,7 +34,30 @@
   
   ### 1.2 Load and prepare .las file
     setwd("E:/Sonja/Msc_Thesis/data/9_individualTrees/")
-    data <- read.csv("tree5.csv")
+    
+    # make list of all tree files
+    tree_files <- list.files(pattern = "\\.csv$", full.names = TRUE)
+    
+    # filter tree files
+    point_counts <- sapply(tree_files, function(f){
+      nrow(fread(f, select = 1L, nThread = parallel::detectCores()))
+    })
+    
+    has_valid_dbh <- sapply(tree_files, function(f){
+      pc <- fread(f)
+      if(ncol(pc)<3)return(FALSE)
+      dbh_points <- sum(pc[[3]]>= 1.25 & pc[[3]]<=1.35)
+      dbh_points >= 20
+    })
+    
+    valid_trees <- tree_files[point_counts>=3000 & point_counts<=50000 & has_valid_dbh]
+    #invalid_trees <- tree_files[!valid_trees]
+    
+     plot3d(read.csv(valid_trees[[1]]))
+    # invalid trees: 1, (43), 74, 83
+    
+    
+    data <- read.csv(valid_trees[[1]])
     
     # remove unneccesary columns
     data[,4:15] <- NULL
@@ -43,12 +66,11 @@
     las <- LAS(data)
     
     # set tree ID
-    tree_i <- 5
+    tree_i <- substr(valid_trees[[1]], 7, 7)
     
     # filter outliers to correct possible errors in clustering
     las <- classify_noise(las, sor(10,3))
     las <- filter_poi(las, Classification != 18)
-    #segment_crown <- matrix(, ncol = 3)
     
     
   ### 1.3 Initialize variables and objects
@@ -730,36 +752,59 @@
   ### 5.7 Plausibility check for segments
     plausible <- logical(nrow(segment_stats))
     plausible[1] <- TRUE  # First segment is always plausible
-    
+
     for (i in 2:nrow(segment_stats)) {
       plausible[i] <- segment_stats$Diameter_noBark[i] <
         segment_stats$Diameter_noBark[i - 1] * 1.2
     }
     
+    
+    
     # Only export/plot plausible segments
-    for (i in which(plausible)) {
-      writeLAS(las_segments_list[[i]],
-               paste("tree_", tree_i, "_segment_", i, ".las"))
-      writeLAS(las_centerlines_list[[i]],
-               paste("tree_", tree_i, "_centerline_", i, ".las"))
-      plot(
-        mid_slices_list[[i]],
-        asp = 1,
-        main = paste("Centre cross-section of segment ", i),
-        sub = paste("Diameter: ", round(segment_stats$Diameter_noBark[i], 3), "m")
-      )
-      lines(circlexy(mid_circles_list[[i]]$par))
+    for (i in seq_along(plausible)) {
+      if(plausible[i]){
+        writeLAS(las_segments_list[[i]],
+                 paste("tree_", tree_i, "_segment_", i, ".las"))
+        writeLAS(las_centerlines_list[[i]],
+                 paste("tree_", tree_i, "_centerline_", i, ".las"))
+        plot(
+          mid_slices_list[[i]],
+          asp = 1,
+          main = paste("Centre cross-section of segment ", i),
+          sub = paste("Diameter: ", round(segment_stats$Diameter_noBark[i], 3), "m")
+        )
+        lines(circlexy(mid_circles_list[[i]]$par))
+        
+      }else {
+        # Find next plausible segment (look ahead)
+        replacement <- NA
+        for(j in (i+1):length(plausible)) {
+          if(isTRUE(plausible[j])) {
+            replacement <- j
+            break
+          }}
+        
+        if (!is.na(replacement)){
+        
+          segment_stats[i, "Diameter"] <- segment_stats[replacement, "Diameter"]
+          segment_stats[i, "Diameter_noBark"] <- if(segment_stats[replacement, "Diameter"] <= 0.41) {
+            segment_stats[replacement, "Diameter"] - 0.01
+          } else {
+            segment_stats[replacement, "Diameter"] - 0.02
+          }
+          segment_stats[i, "Diameter_class"] <- diameter_classification(segment_stats[i, "Diameter_noBark"])
+          segment_stats[i, "volume"] <- pi * (segment_stats[i, "Diameter_noBark"]/2)^2 * segment_stats[i, "Length"]
+      } 
+      }
     }
     
-    # print the segments that were filtered out and remove from segment_stats
-    for (i in which(!plausible)) {
-      cat(
-        "Segment",
-        i,
-        "is not plausible, point cloud is too sparse.
-          It will be accounted for in crown volume.\n"
-      )
-      segment_stats <- subset(segment_stats, Segment != i)
+    if(!isTRUE(plausible[length(plausible)])) {
+      segment_stats <- segment_stats[-length(plausible), ]
+      # If you have associated lists, remove the last element as well:
+      las_segments_list <- las_segments_list[-length(plausible)]
+      las_centerlines_list <- las_centerlines_list[-length(plausible)]
+      mid_slices_list <- mid_slices_list[-length(plausible)]
+      mid_circles_list <- mid_circles_list[-length(plausible)]
     }
     
     print(segment_stats)
