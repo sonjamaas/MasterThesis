@@ -31,6 +31,7 @@
     library(data.table)
     library(circular)
     library(dplyr)
+    library(stringr)
   
   ### 1.2 Load and prepare .las file
     setwd("E:/Sonja/Msc_Thesis/data/9_individualTrees/")
@@ -53,24 +54,8 @@
     valid_trees <- tree_files[point_counts>=3000 & point_counts<=50000 & has_valid_dbh]
     #invalid_trees <- tree_files[!valid_trees]
     
-     plot3d(read.csv(valid_trees[[1]]))
+    # plot3d(read.csv(valid_trees[[1]]))
     # invalid trees: 1, (43), 74, 83
-    
-    
-    data <- read.csv(valid_trees[[1]])
-    
-    # remove unneccesary columns
-    data[,4:15] <- NULL
-    
-    # convert to .las
-    las <- LAS(data)
-    
-    # set tree ID
-    tree_i <- substr(valid_trees[[1]], 7, 7)
-    
-    # filter outliers to correct possible errors in clustering
-    las <- classify_noise(las, sor(10,3))
-    las <- filter_poi(las, Classification != 18)
     
     
   ### 1.3 Initialize variables and objects
@@ -79,7 +64,9 @@
     allowed_lengths <- c(3,4,6,10)
     
     # initialize segment stats table
-    segment_stats <- data.frame(Tree = numeric(),
+
+    
+    segment_stats_final <- data.frame(Tree = numeric(),
                                 Segment = numeric(),
                                 Length = numeric(),
                                 Max_Deviation = numeric(), 
@@ -93,11 +80,8 @@
                                 volume = numeric(),
                                 # Has_Branch = logical(),
                                 Branch_Count = numeric())
-    
 
-    # empty list for the final segments
-    final_segments <- list()
-    i <- 2
+    
     
     # set first branch variable to 0
     first_branch <- 0
@@ -114,6 +98,8 @@
     slice_size <- 0.1
     min_points <- 10
     max_window <- 2.0
+    
+    crown_fm <- 0
   
   
   
@@ -232,26 +218,25 @@
                                    Max_Deviation,
                                    Diameter_noBark,
                                    branches) {
-      class_curve <- ""
-      if ((Max_Deviation / Length) <= 0.02 &
+      class <- ""
+      if (!is.na(Max_Deviation) && !is.na(Length) && !is.na(branches) &&
+          Length != 0 && (Max_Deviation / Length) <= 0.02 &&
           (branches / Length) <= 0.5) {
         class <- "A"
-      } else if ((Max_Deviation / Length) > 0.02 &
-                 (Max_Deviation / Length) <= 0.03) {
+      } else if (!is.na(Max_Deviation) && !is.na(Length) && !is.na(branches) && (Max_Deviation / Length) <= 0.03) {
         class <- "B"
-      } else if ((Max_Deviation / Length) > 0.03 &
-                 (Max_Deviation / Length) <= 0.04 &
-                 Diameter_noBark <= 0.49) {
+      } else if (!is.na(Max_Deviation) && !is.na(Length) && !is.na(branches) && (Max_Deviation / Length) > 0.03 &&
+                 (Max_Deviation / Length) <= 0.04 && Diameter_noBark <= 0.49) {
         class <- "C"
-      } else if ((Max_Deviation / Length) > 0.04 &
-                 (Max_Deviation / Length) <= 0.06 &
+      } else if (!is.na(Max_Deviation) && !is.na(Length) &&!is.na(branches) && (Max_Deviation / Length) > 0.04 &&
+                 (Max_Deviation / Length) <= 0.06 &&
                  Diameter_noBark >= 0.5) {
         class <- "C"
-      } else {
+      } else if (!is.na(Max_Deviation) && !is.na(Length) && !is.na(branches) && (Max_Deviation / Length) >= 0.06){
         class <- "D"
-      }
+      } else {class <- ""}
+      return(class)
     }
-  
   
   ### 2.5 Function to determine diameter class
     diameter_classification <- function(Diameter_noBark) {
@@ -349,34 +334,73 @@
 
 ##################### 3. Build aRchi object from point cloud ###################
 
+for (l in 1:length(valid_trees)){
+  
+  segment_stats <- data.frame(Tree = numeric(),
+                              Segment = numeric(),
+                              Length = numeric(),
+                              Max_Deviation = numeric(), 
+                              Class = character(),
+                              Start_Z = numeric(), End_Z = numeric(),
+                              Diameter = numeric(),
+                              Diameter_noBark = numeric(),
+                              Diameter_class = character(),
+                              FirstBranch_height = numeric(),
+                              radial_variance = numeric(),
+                              volume = numeric(),
+                              # Has_Branch = logical(),
+                              Branch_Count = numeric())
+  
+  # empty list for the final segments
+  final_segments <- list()
+  #i <- 2
     
-  ### 3.1 Build aRchi object
+    slice_size <- 0.1
+  
+  ### 3.1 Read data and clean
+    data <- read.csv(valid_trees[[l]])
+    
+    # remove unneccesary columns
+    data[,4:15] <- NULL
+    
+    # convert to .las
+    las <- LAS(data)
+    
+    # set tree ID
+    tree_i <- as.numeric(str_extract(valid_trees[[l]], "\\d+"))
+    
+    # filter outliers to correct possible errors in clustering
+    las <- classify_noise(las, sor(10,3))
+    las <- filter_poi(las, Classification != 18)
+    
+    
+  ### 3.2 Build aRchi object
     archi <- build_aRchi()
     archi <- add_pointcloud(archi, point_cloud = las)
     
     
-  ### 3.2 skeletonize aRchi object and add radius
+  ### 3.3 skeletonize aRchi object and add radius
     archi <- skeletonize_pc(archi, D = 1, cl_dist = 0.3, max_d = 1.5,
       progressive = TRUE)
 
     
-  ### 3.3 Add radius to aRchi object  
+  ### 3.4 Add radius to aRchi object  
     archi <- add_radius(archi, sec_length = 0.5, by_axis = TRUE, 
                         method = "median")
   
     
-  ### 3.4 Calculate paths of the aRchi object
+  ### 3.5 Calculate paths of the aRchi object
     archi_test <- Make_Path(archi)
   
     
-  ### 3.5 Clean the QSM table
-    Clean_QSM(archi_test, threshold = 0.1, plotresult = TRUE)
+  ### 3.6 Clean the QSM table
+    Clean_QSM(archi_test, threshold = 0.1, plotresult = FALSE)
     
-  ### 3.6 Get branch heights
+  ### 3.7 Get branch heights
     fork_heights <- ForkRateWithHeights(archi_test)
   
   
-  ### 3.7 Extract QSM table
+  ### 3.8 Extract QSM table
     qsm_table <- archi_test@QSM
 
 
@@ -385,7 +409,6 @@
 
   ### 4.1 subset the QSM table for main axis (axisID = 1)
     main_stem <- subset(qsm_table, axis_ID == 1)  
-    # crown <- subset(qsm_table, axis_ID != 1)
 
     
   ### 4.2 Extract start/end coordinates of main stem cylinders
@@ -393,11 +416,6 @@
       as.matrix(main_stem[, c("startX", "startY", "startZ")]),
       as.matrix(main_stem[, c("endX", "endY", "endZ")])
     )
-    
-    # crown_points <- rbind(
-    #   as.matrix(crown[, c("startX", "startY", "startZ")]),
-    #   as.matrix(crown[, c("endX", "endY", "endZ")])
-    # )
   
     
   ### 4.3 Remove duplicates (if needed)
@@ -426,9 +444,9 @@
     in_main_axis <- rep(FALSE, nrow(pc))
   
     # check if points are within the determined main axis cylinders
-    for (i in seq_len(nrow(main_stem))) {
+    for (m in seq_len(nrow(main_stem))) {
       
-      cyl <- main_stem[i, ]
+      cyl <- main_stem[m, ]
       start <- as.numeric(c(cyl$startX, cyl$startY, cyl$startZ))
       end <- as.numeric(c(cyl$endX, cyl$endY, cyl$endZ))
       radius <- cyl$radius_cyl
@@ -440,7 +458,7 @@
       mask <- points_in_cylinder(pc, start, end, 
                                  max_radius = radius+0.1, min_radius = 0, 
                                  buffer = 0)
-      cat("Cylinder", i, "selected", sum(mask), "points\n")
+      cat("Cylinder", m, "selected", sum(mask), "points\n")
       
       in_main_axis <- in_main_axis | mask
     }
@@ -510,11 +528,13 @@
     # Initialize a new list of segment start indices
     merged_segment_indices <- c(segment_indices[1])
     
+    
+    n <- 2
     # segment the stem 
-    while (i < length(segment_indices)) {
-      start_idx <- segment_indices[i]
+    while (n < length(segment_indices)) {
+      start_idx <- segment_indices[n]
       segment_length <- 0
-      j <- i  # Keep track of a separate index for merging
+      j <- n  # Keep track of a separate index for merging
       
       while (j < length(segment_indices) &&
              segment_length < min_segment_length) {
@@ -530,7 +550,7 @@
       if (length(possible_lengths) > 0 & segment_length >= 3) {
         final_segments <- rbind(final_segments, c(start_idx, end_idx))
       }
-      i <- j  # Move to the next unmerged segment
+      n <- j  # Move to the next unmerged segment
     }
     
     # Convert to a proper list of indices
@@ -553,10 +573,10 @@
     mid_circles_list <- list()
   
     # find center line of each stem segment and calculate parameters
-    for (i in 1:(length(merged_segment_indices) - 1)) {
+    for (o in 1:(length(merged_segment_indices) - 1)) {
       
-      segment_i <- stem_sorted[merged_segment_indices[i]:
-                                 merged_segment_indices[i + 1], ]
+      segment_i <- stem_sorted[merged_segment_indices[o]:
+                                 merged_segment_indices[o + 1], ]
       
       # initialize centerline dataframe
       centerline <- data.frame(Z = numeric(), Xc = numeric(), Yc = numeric())
@@ -589,23 +609,31 @@
                               Y = centerline$Yc, 
                               Z = centerline$Z)
       
-      # filter for outliers in data frame
-      Q1_x <- quantile(las_data2$X, .25)
-      Q3_x <- quantile(las_data2$X, .75)
-      IQR_x <- IQR(las_data2$X)
-      las_data2 <- subset(las_data2,
-                          las_data2$X > (Q1_x - 1.5 * IQR_x) &
-                            las_data2$X < (Q3_x + 1.5 * IQR_x))
+      # # filter for outliers in data frame
+      # Q1_x <- quantile(las_data2$X, .25)
+      # Q3_x <- quantile(las_data2$X, .75)
+      # IQR_x <- IQR(las_data2$X)
+      # las_data2 <- subset(las_data2,
+      #                     las_data2$X > (Q1_x - 1.5 * IQR_x) &
+      #                       las_data2$X < (Q3_x + 1.5 * IQR_x))
+      
+      # filter outliers with boxplot method
+      outliers_las_data2_x <- boxplot.stats(las_data2$X)$out
+      outliers_las_data2_y <- boxplot.stats(las_data2$Y)$out
+      outliers_las_data2_z <- boxplot.stats(las_data2$Z)$out
+      las_data2 <- las_data2[!(las_data2$X %in% outliers_las_data2_x |las_data2$Y %in% outliers_las_data2_y | las_data2$Z %in% outliers_las_data2_z),]
+      las_data2 <- subset(las_data2, X >= 0 & Y >= 0 & Z >= 0)
       
       las_segment <- LAS(las_data)
       las_centerline <- LAS(las_data2)
       
-      las_segments_list[[i]] <- las_segment
-      las_centerlines_list[[i]] <- las_centerline
+      
+      las_segments_list[[o]] <- las_segment
+      las_centerlines_list[[o]] <- las_centerline
       
       # compute segment parameters
-      segment_start <- merged_segment_indices[i]
-      segment_end <- merged_segment_indices[i + 1]
+      segment_start <- merged_segment_indices[o]
+      segment_end <- merged_segment_indices[o + 1]
       
       if (is.na(segment_start) | is.na(segment_end)) {
         # print(paste("Warning: NA values found in segment indices at row", i))
@@ -635,10 +663,10 @@
       diameter_start <- start_circle[[1]][3] * 2
       
       # exclude segments with a smaller starting diameter than 15cm
-      if (diameter_start < 0.15) {
-        segment_crown <- rbind(segment_crown, segment_i)
-        next
-      }
+      # if (diameter_start < 0.15) {
+      #   segment_crown <- rbind(segment_crown, segment_i)
+      #   next
+      # }
       
       repeat {
         mid_z <- (stem_sorted[segment_end, 3] +
@@ -669,8 +697,8 @@
       # diameter class
       diameter_class <- diameter_classification(diameter_noBark)
       
-      mid_slices_list[[i]] <- mid_slice
-      mid_circles_list[[i]] <- mid_circle
+      mid_slices_list[[o]] <- mid_slice
+      mid_circles_list[[o]] <- mid_circle
       
       # calculate Curvature as deviation from a straight line
       if (nrow(centerline) > 2) {
@@ -705,22 +733,23 @@
                                                  mid_circle[[1]][2])
       
       # calculate volume of segment (fm)
-      segment_i_df <- as.data.frame(segment_i)  # Ensure it's a data frame
-      segment_i_df[, 1:3] <- sweep(segment_i_df[, 1:3], 2, 
-                                   colMeans(segment_i_df[, 1:3]), "-")
-      ashape <- ashape3d(as.matrix(segment_i_df), alpha = 1)
-      fm <- volume_ashape3d(ashape)
-      
+      # segment_i_df <- as.data.frame(segment_i)  # Ensure it's a data frame
+      # segment_i_df[, 1:3] <- sweep(segment_i_df[, 1:3], 2, 
+      #                              colMeans(segment_i_df[, 1:3]), "-")
+      # ashape <- ashape3d(as.matrix(segment_i_df), alpha = 1)
+      # fm <- volume_ashape3d(ashape)
+      fm <- pi * (diameter_noBark/2)^2 * as.numeric(segment_length)
       
       branches <- sum(fork_heights[c(3:length(fork_heights))] >= 
                         stem_sorted[segment_start, 3] &
                         fork_heights[c(3:length(fork_heights))] <  
                         stem_sorted[segment_end, 3])
+      if(is.na(branches)){branches <- 0}
       
-            # rvr classification
+      # rvr classification
       class <- rvr_classification(segment_length, max_curvature, 
                                   diameter_noBark, branches)
-      
+
       # make a plot to vizualise the stem segment cross section
       circlexy <- function(xyr, n = 180) {
         theta = seq(0, 2 * pi, len = n)
@@ -728,11 +757,10 @@
       }
       
       # collect segment stats in table
-      segment_stats <- rbind(
-        segment_stats,
-        data.frame(
+      segment_stats <- rbind(segment_stats,
+          data.frame(
           Tree = tree_i,
-          Segment = i,
+          Segment = o,
           Length = segment_length,
           Max_Deviation = max_curvature,
           Class = class,
@@ -744,29 +772,68 @@
           radial_variance = round(radial_variance, digits = 10),
           volume = fm,
           Branch_Count = branches
-        )
-      )
+      ))
     } 
     
 
   ### 5.7 Plausibility check for segments
     plausible <- logical(nrow(segment_stats))
     plausible[1] <- TRUE  # First segment is always plausible
+    last_plausible <- 1
 
     for (i in 2:nrow(segment_stats)) {
       plausible[i] <- segment_stats$Diameter_noBark[i] <
-        segment_stats$Diameter_noBark[i - 1] * 1.2
+        segment_stats$Diameter_noBark[last_plausible] * 1.2 
+      if(plausible[i]){
+        last_plausible <- i
+      }
     }
     
     
     
     # Only export/plot plausible segments
-    for (i in seq_along(plausible)) {
-      if(plausible[i]){
-        writeLAS(las_segments_list[[i]],
-                 paste("tree_", tree_i, "_segment_", i, ".las"))
-        writeLAS(las_centerlines_list[[i]],
-                 paste("tree_", tree_i, "_centerline_", i, ".las"))
+    # for (i in seq_along(plausible)) {
+    #   if(plausible[i]){
+    #     writeLAS(las_segments_list[[i]],
+    #              paste("tree_", tree_i, "_segment_", i, ".las"))
+    #     writeLAS(las_centerlines_list[[i]],
+    #              paste("tree_", tree_i, "_centerline_", i, ".las"))
+    #     plot(
+    #       mid_slices_list[[i]],
+    #       asp = 1,
+    #       main = paste("Centre cross-section of segment ", i),
+    #       sub = paste("Diameter: ", round(segment_stats$Diameter_noBark[i], 3), "m")
+    #     )
+    #     lines(circlexy(mid_circles_list[[i]]$par))
+    #     
+    #   }else {
+    #     # Find next plausible segment (look ahead)
+    #     replacement <- NA
+    #     for(j in (i+1):length(plausible)) {
+    #       if(isTRUE(plausible[j])) {
+    #         replacement <- j
+    #         break
+    #       }}
+    #     
+    #     if (!is.na(replacement)){
+    #     
+    #       segment_stats[i, "Diameter"] <- segment_stats[replacement, "Diameter"]
+    #       segment_stats[i, "Diameter_noBark"] <- if(segment_stats[replacement, "Diameter"] <= 0.41) {
+    #         segment_stats[replacement, "Diameter"] - 0.01
+    #       } else {
+    #         segment_stats[replacement, "Diameter"] - 0.02
+    #       }
+    #       segment_stats[i, "Diameter_class"] <- diameter_classification(segment_stats[i, "Diameter_noBark"])
+    #       segment_stats[i, "volume"] <- pi * (segment_stats[i, "Diameter_noBark"]/2)^2 * segment_stats[i, "Length"]
+    #       segment_stats[i, "Class"] <- rvr_classification(segment_stats[i, "Length"], segment_stats[i, "Max_Deviation"],segment_stats[i, "Diameter_noBark"], segment_stats[i, "Branch_Count"])
+    #   }else{segment_stats[i,] <- segment_stats[-i,]} 
+    #   }
+    # }
+    
+    for (i in length(plausible):1) {  # Iterate backwards!
+      if(plausible[i]) {
+        writeLAS(las_segments_list[[i]], paste("tree_", tree_i, "_segment_", i, ".las"))
+        writeLAS(las_centerlines_list[[i]], paste("tree_", tree_i, "_centerline_", i, ".las"))
         plot(
           mid_slices_list[[i]],
           asp = 1,
@@ -774,29 +841,45 @@
           sub = paste("Diameter: ", round(segment_stats$Diameter_noBark[i], 3), "m")
         )
         lines(circlexy(mid_circles_list[[i]]$par))
-        
-      }else {
-        # Find next plausible segment (look ahead)
+      } else {
+        # Find next plausible segment
         replacement <- NA
-        for(j in (i+1):length(plausible)) {
-          if(isTRUE(plausible[j])) {
-            replacement <- j
-            break
-          }}
-        
-        if (!is.na(replacement)){
-        
+        if (i < length(plausible)) {
+          for (j in (i+1):length(plausible)) {
+            if (isTRUE(plausible[j])) {
+              replacement <- j
+              break
+            }
+          }
+        }
+        if (!is.na(replacement)) {
           segment_stats[i, "Diameter"] <- segment_stats[replacement, "Diameter"]
-          segment_stats[i, "Diameter_noBark"] <- if(segment_stats[replacement, "Diameter"] <= 0.41) {
+          segment_stats[i, "Diameter_noBark"] <- if (segment_stats[replacement, "Diameter"] <= 0.41) {
             segment_stats[replacement, "Diameter"] - 0.01
           } else {
             segment_stats[replacement, "Diameter"] - 0.02
           }
           segment_stats[i, "Diameter_class"] <- diameter_classification(segment_stats[i, "Diameter_noBark"])
           segment_stats[i, "volume"] <- pi * (segment_stats[i, "Diameter_noBark"]/2)^2 * segment_stats[i, "Length"]
-      } 
+          segment_stats[i, "Class"] <- rvr_classification(
+            segment_stats[i, "Length"],
+            segment_stats[i, "Max_Deviation"],
+            segment_stats[i, "Diameter_noBark"],
+            segment_stats[i, "Branch_Count"]
+          )
+          plausible[i] <- TRUE  # Optionally mark as plausible now
+        } else {
+          # Delete row i from all relevant objects
+          segment_stats <- segment_stats[-i, ]
+          plausible <- plausible[-i]
+          las_segments_list <- las_segments_list[-i]
+          las_centerlines_list <- las_centerlines_list[-i]
+          mid_slices_list <- mid_slices_list[-i]
+          mid_circles_list <- mid_circles_list[-i]
+        }
       }
     }
+    
     
     if(!isTRUE(plausible[length(plausible)])) {
       segment_stats <- segment_stats[-length(plausible), ]
@@ -807,22 +890,24 @@
       mid_circles_list <- mid_circles_list[-length(plausible)]
     }
     
-    print(segment_stats)
+    segment_stats_final <- rbind(segment_stats_final, segment_stats)
+    
+    print(segment_stats_final)
     
     cat("Total Stem Volume: ", 
-        round(sum(segment_stats$volume), 
+        round(sum(segment_stats_final$volume), 
               digits = 3), "m³", "\n" , 
         "Volume Quality A: ", 
-        round(sum(subset(segment_stats, segment_stats$Class == "A")$volume),
+        round(sum(subset(segment_stats_final, segment_stats_final$Class == "A")$volume),
               digits = 3), "m³", "\n",
         "Volume Quality B: ", 
-        round(sum(subset(segment_stats, segment_stats$Class == "B")$volume), 
+        round(sum(subset(segment_stats_final, segment_stats_final$Class == "B")$volume), 
               digits = 3), "m³", "\n",
         "Volume Quality C: ", 
-        round(sum(subset(segment_stats, segment_stats$Class == "C")$volume), 
+        round(sum(subset(segment_stats_final, segment_stats_final$Class == "C")$volume), 
               digits = 3), "m³", "\n",
         "Volume Quality D: ", 
-        round(sum(subset(segment_stats, segment_stats$Class == "D")$volume), 
+        round(sum(subset(segment_stats_final, segment_stats_final$Class == "D")$volume), 
               digits = 3), "m³")
 
     
@@ -830,48 +915,49 @@
 ########################### 6. Extract crown points ############################
 
     
-  crown_points <- anti_join(as.data.frame(pc), as.data.frame(stem_points))
-  crown_points <- as.matrix(crown_points)
-  crown_points <- subset(crown_points, crown_points[,3] >= 
-                           min(fork_heights[3:length(fork_heights)]))
-  # plot3d(crown_points)
-  
-  crown_las <- data.frame(X = crown_points[, 1],  
-                          Y = crown_points[, 2], 
-                          Z = crown_points[, 3])
-  crown_las <- LAS(crown_las)
-  
-  # filter noise & outliers
-  crown_filtered <- classify_noise(crown_las, sor(10,3))
-  crown_filtered <- filter_poi(crown_filtered, Classification != 18)
-  
-  # build the archi object
-  crown_archi <- build_aRchi()
-  crown_archi <- add_pointcloud(crown_archi, point_cloud = crown_filtered)
-  crown_archi <- skeletonize_pc(crown_archi, D = 0.5, cl_dist = 0.15, max_d = 0.5,
-                                progressive = TRUE)
-  
-  # plot(crown_archi)
-  crown_archi <- add_radius(crown_archi, sec_length = 0.5, by_axis = TRUE, 
-                      method = "median")
-  crown_qsm <- crown_archi@QSM
-  
-  crown_wood_v <- sum(subset(crown_qsm, radius_cyl >= 0.07 & 
-                             length >= 0.05 & 
-                             branching_order < 4)$volume)
-
-  
+  # crown_points <- anti_join(as.data.frame(pc), as.data.frame(stem_points))
+  # crown_points <- as.matrix(crown_points)
+  # crown_points <- subset(crown_points, crown_points[,3] >= segment_stats[nrow(segment_stats),]$End_Z
+  #                        )
+  # # plot3d(crown_points)
+  # 
+  # crown_las <- data.frame(X = crown_points[, 1],  
+  #                         Y = crown_points[, 2], 
+  #                         Z = crown_points[, 3])
+  # crown_las <- LAS(crown_las)
+  # 
+  # # filter noise & outliers
+  # crown_filtered <- classify_noise(crown_las, sor(10,3))
+  # crown_filtered <- filter_poi(crown_filtered, Classification != 18)
+  # 
+  # # build the archi object
+  # crown_archi <- build_aRchi()
+  # crown_archi <- add_pointcloud(crown_archi, point_cloud = crown_filtered)
+  # crown_archi <- skeletonize_pc(crown_archi, D = 0.5, cl_dist = 0.15, max_d = 0.5,
+  #                               progressive = TRUE)
+  # 
+  # # plot(crown_archi)
+  # crown_archi <- add_radius(crown_archi, sec_length = 0.5, by_axis = TRUE, 
+  #                     method = "median")
+  # crown_qsm <- crown_archi@QSM
+  # 
+  # crown_wood_v <- sum(subset(crown_qsm, radius_cyl >= 0.07 & 
+  #                            length >= 0.05 & 
+  #                            branching_order < 4)$volume)
+  # 
+  # crown_fm <- crown_fm + crown_wood_v
   
 ########################### 7. Make Conclusion Table ###########################
   
   # 1. Column: Quality Class
   # 2. Column: Volume of the respective class
   
-  summary <- segment_stats %>%
-    group_by(Class) %>%
-    summarize(Volume = sum(volume))
+  # summary <- segment_stats %>%
+  #   group_by(Class) %>%
+  #   summarize(Volume = sum(volume))
   
-  print(segment_stats)
+  # print(segment_stats)
+  # sum(segment_stats$volume)
 
-  
+}
   
