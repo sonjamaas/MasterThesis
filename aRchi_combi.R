@@ -333,7 +333,7 @@
 
 
 ##################### 3. Build aRchi object from point cloud ###################
-
+# l <- 9
 for (l in 1:length(valid_trees)){
   
   segment_stats <- data.frame(Tree = numeric(),
@@ -789,47 +789,6 @@ for (l in 1:length(valid_trees)){
       }
     }
     
-    
-    
-    # Only export/plot plausible segments
-    # for (i in seq_along(plausible)) {
-    #   if(plausible[i]){
-    #     writeLAS(las_segments_list[[i]],
-    #              paste("tree_", tree_i, "_segment_", i, ".las"))
-    #     writeLAS(las_centerlines_list[[i]],
-    #              paste("tree_", tree_i, "_centerline_", i, ".las"))
-    #     plot(
-    #       mid_slices_list[[i]],
-    #       asp = 1,
-    #       main = paste("Centre cross-section of segment ", i),
-    #       sub = paste("Diameter: ", round(segment_stats$Diameter_noBark[i], 3), "m")
-    #     )
-    #     lines(circlexy(mid_circles_list[[i]]$par))
-    #     
-    #   }else {
-    #     # Find next plausible segment (look ahead)
-    #     replacement <- NA
-    #     for(j in (i+1):length(plausible)) {
-    #       if(isTRUE(plausible[j])) {
-    #         replacement <- j
-    #         break
-    #       }}
-    #     
-    #     if (!is.na(replacement)){
-    #     
-    #       segment_stats[i, "Diameter"] <- segment_stats[replacement, "Diameter"]
-    #       segment_stats[i, "Diameter_noBark"] <- if(segment_stats[replacement, "Diameter"] <= 0.41) {
-    #         segment_stats[replacement, "Diameter"] - 0.01
-    #       } else {
-    #         segment_stats[replacement, "Diameter"] - 0.02
-    #       }
-    #       segment_stats[i, "Diameter_class"] <- diameter_classification(segment_stats[i, "Diameter_noBark"])
-    #       segment_stats[i, "volume"] <- pi * (segment_stats[i, "Diameter_noBark"]/2)^2 * segment_stats[i, "Length"]
-    #       segment_stats[i, "Class"] <- rvr_classification(segment_stats[i, "Length"], segment_stats[i, "Max_Deviation"],segment_stats[i, "Diameter_noBark"], segment_stats[i, "Branch_Count"])
-    #   }else{segment_stats[i,] <- segment_stats[-i,]} 
-    #   }
-    # }
-    
     for (i in length(plausible):1) {  # Iterate backwards!
       if(plausible[i]) {
         writeLAS(las_segments_list[[i]], paste("tree_", tree_i, "_segment_", i, ".las"))
@@ -915,37 +874,40 @@ for (l in 1:length(valid_trees)){
 ########################### 6. Extract crown points ############################
 
     
-  # crown_points <- anti_join(as.data.frame(pc), as.data.frame(stem_points))
-  # crown_points <- as.matrix(crown_points)
-  # crown_points <- subset(crown_points, crown_points[,3] >= segment_stats[nrow(segment_stats),]$End_Z
-  #                        )
-  # # plot3d(crown_points)
-  # 
-  # crown_las <- data.frame(X = crown_points[, 1],  
-  #                         Y = crown_points[, 2], 
-  #                         Z = crown_points[, 3])
-  # crown_las <- LAS(crown_las)
-  # 
-  # # filter noise & outliers
-  # crown_filtered <- classify_noise(crown_las, sor(10,3))
-  # crown_filtered <- filter_poi(crown_filtered, Classification != 18)
-  # 
-  # # build the archi object
-  # crown_archi <- build_aRchi()
-  # crown_archi <- add_pointcloud(crown_archi, point_cloud = crown_filtered)
-  # crown_archi <- skeletonize_pc(crown_archi, D = 0.5, cl_dist = 0.15, max_d = 0.5,
-  #                               progressive = TRUE)
-  # 
-  # # plot(crown_archi)
-  # crown_archi <- add_radius(crown_archi, sec_length = 0.5, by_axis = TRUE, 
-  #                     method = "median")
-  # crown_qsm <- crown_archi@QSM
-  # 
-  # crown_wood_v <- sum(subset(crown_qsm, radius_cyl >= 0.07 & 
-  #                            length >= 0.05 & 
-  #                            branching_order < 4)$volume)
-  # 
-  # crown_fm <- crown_fm + crown_wood_v
+  crown_points <- anti_join(as.data.frame(pc), as.data.frame(stem_points))
+  crown_points <- as.matrix(crown_points)
+  crown_points <- subset(crown_points, crown_points[,3] >= segment_stats[nrow(segment_stats),]$Start_Z)
+  # plot3d(crown_points)
+
+  crown_las <- data.frame(X = crown_points[, 1],
+                          Y = crown_points[, 2],
+                          Z = crown_points[, 3])
+  crown_las <- LAS(crown_las)
+
+  # filter noise & outliers
+  crown_filtered <- classify_noise(crown_las, sor(10,3))
+  crown_filtered <- filter_poi(crown_filtered, Classification != 18)
+  
+  # plot3d(crown_points)
+ 
+  # build the archi object
+  crown_archi <- build_aRchi()
+  crown_archi <- add_pointcloud(crown_archi, point_cloud = crown_filtered)
+  crown_archi <- skeletonize_pc(crown_archi, D = 0.5, cl_dist = 0.15, max_d = 0.5,
+                                progressive = TRUE)
+
+  # plot(crown_archi)
+  crown_archi <- add_radius(crown_archi, sec_length = 0.5, by_axis = TRUE,
+                      method = "median")
+  crown_qsm <- crown_archi@QSM
+
+  crown_wood_v <- sum(subset(crown_qsm, 
+                             radius_cyl >= 0.07 &
+                             length >= 0.05 &
+                             branching_order < 4 & #startZ >= segment_stats[length(segment_stats)]$End_Z
+                             axis_ID != "1")$volume)
+
+  crown_fm <- crown_fm + crown_wood_v
   
 ########################### 7. Make Conclusion Table ###########################
   
