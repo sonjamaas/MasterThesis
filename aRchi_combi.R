@@ -869,57 +869,59 @@ for (l in 1:length(valid_trees)){
         round(sum(subset(segment_stats_final, segment_stats_final$Class == "D")$volume), 
               digits = 3), "m³")
 
-    
+
 
 ########################### 6. Extract crown points ############################
 
+    archi_ForCrown <- build_aRchi()
+    archi_ForCrown <- add_pointcloud(archi_ForCrown, point_cloud = las)
     
-  crown_points <- anti_join(as.data.frame(pc), as.data.frame(stem_points))
-  crown_points <- as.matrix(crown_points)
-  crown_points <- subset(crown_points, crown_points[,3] >= segment_stats[nrow(segment_stats),]$Start_Z)
-  # plot3d(crown_points)
+    
+    ### 3.3 skeletonize aRchi object and add radius
+    archi_ForCrown <- skeletonize_pc(archi_ForCrown, D = 0.5, cl_dist = 0.3, max_d = 1.5,
+                            progressive = TRUE)
+    # plot(archi_ForCrown)
+    ### 3.4 Add radius to aRchi object  
+    archi_ForCrown <- add_radius(archi_ForCrown, sec_length = 0.5, by_axis = TRUE, 
+                        method = "median")
+    
+    
+    ### 3.5 Calculate paths of the aRchi object
+    archi_test <- Make_Path(archi_ForCrown)
+    
+    
+    ### 3.6 Clean the QSM table
+    Clean_QSM(archi_test, threshold = 0.1, plotresult = FALSE)
+    qsm_table_ForCrown <- archi_ForCrown@QSM
+    
+    
+    
+    qsm_segment_summary <- qsm_table_ForCrown %>%
+      group_by(segment_ID) %>%
+      summarise(
+        axis_ID = first(axis_ID),                  # Retain axis_ID for the segment
+        branching_order = first(branching_order),  # Retain branching_order
+        total_length = sum(length, na.rm = TRUE),  # Sum length for the segment
+        mean_radius = mean(radius_cyl, na.rm = TRUE), # Mean radius for the segment
+        volume = pi * mean_radius^2 * total_length # Calculate volume as cylinder
+      )
+    
+    # View the result
+    # print(qsm_segment_summary)
+    v <- sum(subset(qsm_segment_summary, branching_order == 2 & axis_ID > 1 & total_length >= 1 & mean_radius >= 0.15)$volume)
 
-  crown_las <- data.frame(X = crown_points[, 1],
-                          Y = crown_points[, 2],
-                          Z = crown_points[, 3])
-  crown_las <- LAS(crown_las)
-
-  # filter noise & outliers
-  crown_filtered <- classify_noise(crown_las, sor(10,3))
-  crown_filtered <- filter_poi(crown_filtered, Classification != 18)
-  
-  # plot3d(crown_points)
- 
-  # build the archi object
-  crown_archi <- build_aRchi()
-  crown_archi <- add_pointcloud(crown_archi, point_cloud = crown_filtered)
-  crown_archi <- skeletonize_pc(crown_archi, D = 0.5, cl_dist = 0.15, max_d = 0.5,
-                                progressive = TRUE)
-
-  # plot(crown_archi)
-  crown_archi <- add_radius(crown_archi, sec_length = 0.5, by_axis = TRUE,
-                      method = "median")
-  crown_qsm <- crown_archi@QSM
-
-  crown_wood_v <- sum(subset(crown_qsm, 
-                             radius_cyl >= 0.07 &
-                             length >= 0.05 &
-                             branching_order < 4 & #startZ >= segment_stats[length(segment_stats)]$End_Z
-                             axis_ID != "1")$volume)
-
-  crown_fm <- crown_fm + crown_wood_v
+  crown_fm <- crown_fm + v
   
 ########################### 7. Make Conclusion Table ###########################
   
   # 1. Column: Quality Class
   # 2. Column: Volume of the respective class
   
-  # summary <- segment_stats %>%
-  #   group_by(Class) %>%
-  #   summarize(Volume = sum(volume))
+  summary <- segment_stats_final %>%
+    group_by(Class) %>%
+    summarize(Volume = sum(volume))
   
-  # print(segment_stats)
-  # sum(segment_stats$volume)
+  sum(segment_stats_final$volume)
 
 }
   
