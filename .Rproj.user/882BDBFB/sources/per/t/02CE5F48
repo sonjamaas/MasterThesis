@@ -3,7 +3,7 @@
     "path": "F:/Sonja/Msc_Thesis/masterThesis/masterThesis/aRchi_combi.R",
     "project_path": "aRchi_combi.R",
     "type": "r_source",
-    "hash": "3039129355",
+    "hash": "765626431",
     "contents": "",
     "dirty": false,
     "created": 1747906356660.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "520,2",
-        "scrollLine": "485"
+        "cursorPosition": "912,26",
+        "scrollLine": "882"
     },
     "folds": "",
-    "lastKnownWriteTime": 1747909352,
+    "lastKnownWriteTime": 1749548586,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1747909350165,
+    "last_content_update": 1749548585745,
     "read_only": false,
     "read_only_alternatives": []
 }

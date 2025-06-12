@@ -788,11 +788,8 @@ for (l in 1:length(valid_trees)){
       }
     }
     
-    las_segments_list <- las_segments_list[!sapply(las_segments_list, is.null)]
-    las_centerlines_list <- las_centerlines_list[!sapply(las_centerlines_list, is.null)]
-    
     for (i in length(plausible):1) {  # Iterate backwards!
-      if(plausible[1]) {
+      if(plausible[i]) {
         writeLAS(las_segments_list[[i]], paste("tree_", tree_i, "_segment_", i, ".las"))
         writeLAS(las_centerlines_list[[i]], paste("tree_", tree_i, "_centerline_", i, ".las"))
         plot(
@@ -926,5 +923,4 @@ for (l in 1:length(valid_trees)){
   sum(segment_stats_final$volume)
 
 }
-  round(sum(segment_stats_final$volume), digits = 3)
-    
+  
