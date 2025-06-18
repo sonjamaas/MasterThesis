@@ -14,19 +14,19 @@ library(lidR)
 # read data
 setwd("E:/Sonja/Msc_Thesis/data/8_preprocessedData/")
 bp <- readLAS("bp/backpack_feb6_subsampled_0_05_Normalize by Ground Points.las")
-uav <- readLAS("E:/Sonja/Msc_Thesis/data/uav/UAV_feb2- shifted.las")
+uav <- readLAS("uav/UAV_feb2_shifted_clipped.las")
 
 # make canopy height model
 bp_chm <- rasterize_canopy(bp, 0.5, pitfree(subcircle = 0.2), pkg = "terra")
+uav_chm <- rasterize_canopy(uav, 0.5, pitfree(subcircle = 0.2), pkg = "terra")
+
 kernel <- matrix(1,3,3)
+
 bp_chm_smoothed <- terra::focal(bp_chm, w = kernel, fun = median, na.rm = TRUE)
-bp_chm_smoothed_ttops <- locate_trees(bp_chm_smoothed, lmf(5))
+bp_chm_smoothed_ttops <- locate_trees(bp_chm_smoothed, lmf(f_beech))
 
-col = height.colors(50)
-plot(bp_chm_smoothed, main = "CHM Pitfree", col = col)
-plot(sf::st_geometry(bp_chm_smoothed_ttops), add = T, pch = 3)
-
-# plot(bp_chm, bg = "white", size = 4)
+uav_chm_smoothed <- terra::focal(uav_chm, w = kernel, fun = median, na.rm = TRUE)
+uav_chm_smoothed_ttops <- locate_trees(uav_chm_smoothed, lmf(f_beech))
 
 f <- function(x) {
   y <- 2.6 * (-(exp(-0.08*(x-2)) - 1)) + 3
@@ -35,20 +35,53 @@ f <- function(x) {
   return(y)
 }
 
-bp_ttops <- locate_trees(bp, lmf(f))
-plot(bp_chm, col = height.colors(50))
-plot(sf::st_geometry(bp_ttops), add = TRUE, pch = 3)
+f_beech <- function(x) {
+  y <- 2.8 * (-(exp(-0.05*(x-3)) - 1)) + 4  # Flatter curve for taller trees
+  y[x < 20] <- 4
+  y[x > 25] <- 5  # Larger window for mature trees
+  return(y)
+}
 
-x <- plot(bp, bg = "white", size = 4)
-add_treetops3d(x, bp_ttops)
+f_optimized <- function(x) {
+  y <- 3.2 * (-(exp(-0.06*(x-4)) - 1)) + 4.5  # Steeper decline for crown separation
+  y[x < 4] <- 4.5  # Increased minimum window for dense stands
+  y[x > 25] <- 8    # Expanded upper range for mature specimens
+  return(y)
+}
 
 algo <- li2012()
-algo2 <- dalponte2016(bp_chm_smoothed, bp_chm_smoothed_ttops)
 bp_trees <- segment_trees(bp, algo, attribute = "ID")
+
+algo2 <- dalponte2016(bp_chm_smoothed, bp_chm_smoothed_ttops)
+algo2 <- dalponte2016(bp_chm_smoothed, bp_chm_smoothed_ttops, max_cr = 9, ID = "treeID")
 bp_trees_dalponte <- segment_trees(bp, algo2)
 
-x <- plot(bp_trees, bg = "white", size = 4, color = "ID", pal = pastel.colors(200))
+algo2_uav <- dalponte2016(uav_chm_smoothed, uav_chm_smoothed_ttops, max_cr = 10, ID = "treeID")
+uav_trees_dalponte <- segment_trees(uav, algo2_uav)
+
+
+algo3 <- silva2016(chm = bp_chm_smoothed, treetops = bp_chm_smoothed_ttops, max_cr_factor = 0.7, exclusion = 0.4)
+bp_trees_silva <- segment_trees(bp, algo3)
+
 plot(bp_trees_dalponte, bg = "white", size = 4, color = "treeID")
+plot(uav_trees_dalponte, bg = "white", size = 4, color = "treeID")
+
+plot(bp_trees_silva, bg = "white", size = 4, color = "treeID")
+
+
+tree_ids <- unique(uav_trees_dalponte$treeID)
+tree_ids <- na.omit(tree_ids)
+for (id in tree_ids) {
+  tree <- filter_poi(uav_trees_dalponte, treeID == id)
+  writeLAS(tree, paste0("tree_", id, ".las"))
+  # Or to CSV
+  # write.csv(as.data.frame(tree), paste0("tree_", id, ".csv"), row.names = FALSE)
+}
+
+
+
+
+
 
 crowns <- crown_metrics(bp_trees_dalponte, func = .stdtreemetrics, geom = "concave")
 
@@ -117,4 +150,6 @@ las_nums <- str_extract(las_files_uav, "\\d+")
 csv_nums <- str_extract(csv_files_bp, "\\d+")
 
 
-# make the right files match ( file names dont match!!!)
+# make the right files match (file names dont match!!!)
+
+# try with tree segmentation from lidr, since crown cutting did not work as planned
