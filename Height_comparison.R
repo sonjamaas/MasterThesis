@@ -168,3 +168,86 @@ lm <- lm(data$Height_FieldData ~ data$Height_TLS)
 lm <- lm(data$Height_UAV ~ data$Height_TLS)
 
 summary.lm(lm)
+
+
+#### 4. pairwise comparison
+
+a <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_FieldData, y = Height_BP), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("Height Backpack") +
+  xlab("")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))
+
+b <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_FieldData, y = Height_TLS), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("Height TLS") +
+  xlab("")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0.5), "cm"))
+
+c <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_FieldData, y = Height_UAV), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("Height UAV") +
+  xlab("Height Field")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        plot.margin = unit(c(0,0,0,0.5), "cm"))
+
+d <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_BP, y = Height_TLS), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("") +
+  xlab("")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"))
+
+e <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_BP, y = Height_UAV), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("") +
+  xlab("Height Backpack")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"))
+
+f <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = Height_TLS, y = Height_UAV), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("") +
+  xlab("Height TLS")+
+  xlim(10,40)+
+  ylim(10, 40)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0.5,0,0), "cm"))
+
+lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
+library(grid)
+grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f,
+             layout_matrix = lay2, widths = c(1,0.85,0.9), heights = c(1,0.9,0.95)
+             ,top = textGrob("Pairwise Comparison of Height measurements [m]", gp=gpar(fontsize =15))
+)
+# export in 6.28 6.4, cubes quadratic
