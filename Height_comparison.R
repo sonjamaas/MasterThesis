@@ -106,7 +106,13 @@ ggplot(data_long, aes(x = Source, y = Height))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Height measurement Comparison")
+  labs(title = "Height Measurement Comparison", )+
+  xlab("") +
+  ylab("DBH [m]") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 15))
+
+# export in 6.28 6.4, cubes quadratic
 
 
 

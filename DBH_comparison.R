@@ -91,13 +91,13 @@ ggplot(data_long, aes(x = Source, y = DBH))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "DBH measurement Comparison", )+
+  labs(title = "DBH Measurement Comparison", )+
   xlab("") +
   ylab("DBH [m]") +
   theme_minimal()+
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 18),
-        plot.title = element_text(size = 20))
+  theme(plot.title = element_text(size = 15))
+
+# export in 6.28 6.4, cubes quadratic
 
 
 
