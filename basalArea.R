@@ -72,6 +72,11 @@ data <- merge(tls, bp, by.x = "TreeID", by.y = "NewID")
 data <- merge(data, field, by.x = "TreeID", by.y = "NewTreeID")
 colnames(data) <- c("TreeID", "Area_TLS", "Area_BP", "Area_Field")
 
+
+t.test(data$Area_TLS, data$Area_BP, paired = TRUE)
+t.test(data$Area_TLS, data$Area_Field, paired = TRUE)
+t.test(data$Area_Field, data$Area_BP, paired = TRUE)
+
 #### 4. pairwise plots
 
 a <- ggplot(data = data)+
@@ -84,7 +89,8 @@ a <- ggplot(data = data)+
   ylim(0, 0.6)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0,0,0.5), "cm"))
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+  annotate("text", x = 0.6, y = 0.1, label = "p-value = 0.004\nmean difference = 0.018", hjust = "right")
 
 b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -95,7 +101,8 @@ b <- ggplot(data = data)+
   xlim(0,0.6)+
   ylim(0, 0.6)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 0.6, y = 0.1, label = "p-value = 0.994\nmean difference = 0.000", hjust = "right")
 
 c <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -107,13 +114,71 @@ c <- ggplot(data = data)+
   ylim(0, 0.6)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0.5,0,0), "cm"))
+        plot.margin = unit(c(0,0.5,0,0), "cm"))+
+  annotate("text", x = 0.6, y = 0.1, label = "p-value = 0.002\nmean difference = 0.012", hjust = "right")
 
 lay2 <- matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE)
-library(grid)
+#library(grid)
 grid.arrange(a, NULL, b, c,
              layout_matrix = lay2, widths = c(1,0.93), heights = c(1,1)
              ,top = textGrob("Pairwise Comparison of Stem Area measurements [m²]", gp=gpar(fontsize =15))
 )
 # export in 6.28 6.4, cubes quadratic
 
+
+
+## Viz
+data_long <- pivot_longer(data, cols = c("Area_TLS", "Area_BP", "Area_Field"), names_to = "Source", values_to = "StemArea")
+
+ggplot(data_long, aes(x = Source, y = StemArea))+
+  geom_jitter(color = "grey",
+              alpha = 0.7,
+              size = 3)+
+  geom_boxplot(color = "darkolivegreen",
+               fill = "darkolivegreen4",
+               alpha = 0.3,
+               notch = TRUE,
+               notchwidth = 0.8,
+               outlier.colour="red",
+               outlier.fill="red",
+               outlier.size=4)+
+  labs(title = "Stem Area measurement Comparison")+
+  xlab("") +
+  ylab("Stem Area [m²]") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 15))
+# export in 6.28 6.4, cubes quadratic
+
+
+## Mean
+bp_mean <- mean(na.omit(data$Area_BP))
+# [1] 0.1860144
+tls_mean <- mean(data$Area_TLS)
+# [1] 0.1980164
+field_mean <- mean(na.omit(data$Area_Field))
+# 0.1935358
+
+
+## Median
+bp_median <- median(na.omit(data$Area_BP))
+# [1] 0.1676385
+tls_median <- median(data$Area_TLS)
+# [1] 0.1727578
+field_median <- median(na.omit(data$Area_Field))
+# [1] 0.1887259
+
+## Standard Deviation
+bp_sd <- sd(na.omit(data$Area_BP))
+# [1] 0.103148
+tls_sd <- sd(data$Area_TLS)
+# [1] 0.09346953
+field_sd <- sd(na.omit(data$Area_Field))
+# [1] 0.08596721
+
+## Range
+bp_range <- range(na.omit(data$Area_BP))
+# [1] 0.01697167 0.52681446
+tls_range <- range(data$Area_TLS)
+# [1] 0.02805521 0.51148977
+field_range <- range(na.omit(data$Area_Field))
+# [1] 0.0315843 0.4583662

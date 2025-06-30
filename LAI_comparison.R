@@ -3,182 +3,826 @@
 ################################################################################
 
 # - alignment of the data
-# - statistical comparison (pearson/spearman R, RMSE, MAE, Cohens Kappa)
-# - 
+# - statistical comparison 
 
 install.packages("spatialEco")
 library(raster)
 library(terra)
 library(spatialEco)
+library(tidyr)
 
 
-setwd("E:/Sonja/Msc_Thesis/data/Metrics/")
+setwd("E:/Sonja/Msc_Thesis/data/Metrics/LAI_LidR")
 
 
 # LAI
-lai_uav <- raster("uav/forest_metrics_LiDAR360/UAV_feb2_shifted_clipped_LeafAreaIndex.tif")
-lai_als <- raster("als/forest_metrics_lidar360/ALS_first_last_merged_shifted_LeafAreaIndex.tif")
+lai_uav <- rast("lai_uav.tif")
+lai_als <- rast("lai_als.tif")
+lai_tls <- rast("lai_tls.tif")
+lai_bp <- rast("lai_bp.tif")
 
-uav_clipped <- crop(lai_uav, lai_als)
-las_clipped <- crop(lai_als, uav_clipped)
-plot(uav_clipped)
-plot(las_clipped)
+plot(lai_uav)
+ggplot(data = as.data.frame(lai_uav, xy = TRUE), aes(x = x, y = y, fill = lai_uav))+
+  geom_tile()+
+  scale_fill_gradient(
+    low = "white",
+    high = "darkgreen",
+    limits = c(0, 1),
+    name = "LAI"
+  )+
+  coord_equal() +
+  theme_minimal()+
+  labs(title = "LAI derived from UAV data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15))
 
-uav_resampled <- resample(uav_clipped, las_clipped, method = "ngb")
+plot(lai_als)
+ggplot(data = as.data.frame(lai_als, xy = TRUE), aes(x = x, y = y, fill = lai_als))+
+  geom_tile()+
+  scale_fill_gradient(
+    low = "white",
+    high = "darkgreen",
+    limits = c(0, 1),
+    name = "LAI"
+  )+
+  coord_equal() +
+  theme_minimal()+
+  labs(title = "LAI derived from ALS data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15))
 
-stack_metrics <- stack(uav_resampled, las_clipped)
-cor_matrix <- layerStats(stack_metrics, 'pearson', na.rm = TRUE)
-# pearson correlation coefficient
-#            UAV LAI       ALS LAI
-# UAV LAI    1.0000000     0.0902783
-# ALS LAI    0.0902783     1.0000000
-#
-# mean
-# UAV        ALS
-# 2.109456   20.899692 
+plot(lai_tls)
+ggplot(data = as.data.frame(lai_tls, xy = TRUE), aes(x = x, y = y, fill = lai_tls))+
+  geom_tile()+
+  scale_fill_gradient(
+    low = "white",
+    high = "darkgreen",
+    limits = c(0, 1),
+    name = "LAI"
+  )+
+  coord_equal() +
+  theme_minimal()+
+  labs(title = "LAI derived from TLS data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15))
 
-corr_coeff <- cor_matrix$`pearson correlation coefficient`[2,1]
-# [1] 0.0902783
+plot(lai_bp)
+ggplot(data = as.data.frame(lai_bp, xy = TRUE), aes(x = x, y = y, fill = lai_bp))+
+  geom_tile()+
+  scale_fill_gradient(
+    low = "white",
+    high = "darkgreen",
+    limits = c(0, 1),
+    name = "LAI"
+  )+
+  coord_equal() +
+  theme_minimal()+
+  labs(title = "LAI derived from backpack data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15))
 
-p_value <- corLocal(uav_resampled, las_clipped, test = TRUE)[[2]]
-plot(p_value)
+# extract values
+vals_uav <- values(lai_uav)
+vals_als <- values(lai_als)
+vals_tls <- values(lai_tls)
+vals_bp <- values(lai_bp)
+valid <- complete.cases(vals_uav, vals_als, vals_bp, vals_tls)
 
-cellStats(abs(las_clipped - uav_resampled), mean)
-# [1] 18.80724
+# plot values to check them
+plot(vals_uav[valid], vals_als[valid],
+     xlab="UAV LAI", ylab="ALS LAI",
+     main="Pixel-wise Comparison (UAV + LAI)")
+abline(0, 1, col="red")
 
-lai_uav_rast <- rast(uav_resampled)
-lai_als_rast <- rast(las_clipped)
-lai_difference <- raster.change(lai_als_rast, lai_uav_rast, s = 5, stat ="t.test")
-plot(lai_difference)
+plot(vals_uav[valid], vals_tls[valid],
+     xlab="UAV LAI", ylab="TLS LAI",
+     main="Pixel-wise Comparison (UAV + TLS)")
+abline(0, 1, col="red")
 
-lm_model <- lm(as.matrix(lai_als_rast) ~ as.matrix(lai_uav_rast))
+plot(vals_uav[valid], vals_bp[valid],
+     xlab="UAV LAI", ylab="Backpack LAI",
+     main="Pixel-wise Comparison (UAV + Backpack)")
+abline(0, 1, col="red")
+
+plot(vals_als[valid], vals_tls[valid],
+     xlab="ALS LAI", ylab="TLS LAI",
+     main="Pixel-wise Comparison (ALS + TLS)")
+abline(0, 1, col="red")
+
+plot(vals_als[valid], vals_bp[valid],
+     xlab="ALS LAI", ylab="Backpack LAI",
+     main="Pixel-wise Comparison (ALS + Backpack)")
+abline(0, 1, col="red")
+
+plot(vals_tls[valid], vals_bp[valid],
+     xlab="TLS LAI", ylab="Backpack LAI",
+     main="Pixel-wise Comparison (TLS + Backpack)")
+abline(0, 1, col="red")
+
+
+
+# Layer summaries
+global(lai_uav, fun=mean, na.rm=TRUE)
+global(lai_als, fun=mean, na.rm=TRUE)
+global(lai_tls, fun=mean, na.rm=TRUE)
+global(lai_bp, fun=mean, na.rm=TRUE)
+
+global(lai_uav, fun=median, na.rm=TRUE)
+global(lai_als, fun=median, na.rm=TRUE)
+global(lai_tls, fun=median, na.rm=TRUE)
+global(lai_bp, fun=median, na.rm=TRUE)
+
+global(lai_uav, fun=sd, na.rm=TRUE)
+global(lai_als, fun=sd, na.rm=TRUE)
+global(lai_tls, fun=sd, na.rm=TRUE)
+global(lai_bp, fun=sd, na.rm=TRUE)
+
+global(lai_uav, fun=range, na.rm=TRUE)
+global(lai_als, fun=range, na.rm=TRUE)
+global(lai_tls, fun=range, na.rm=TRUE)
+global(lai_bp, fun=range, na.rm=TRUE)
+
+values1 <- values(lai_uav)
+values2 <- values(lai_als)
+values3 <- values(lai_tls)
+values4 <- values(lai_bp)
+
+# Exclude NAs
+valid <- complete.cases(values1, values2, values3, values4)
+
+hist(values1, breaks=50, col=rgb(1,0,0,0.5), main="Histogram of UAV LAI Layers",
+     xlab="LAI", xlim=range(c(values1, values2), na.rm=TRUE))
+hist(values2, breaks=50, col=rgb(0,0,1,0.5), add=TRUE)
+hist(values3, breaks=50, col=rgb(0,1,0,0.5), add=TRUE)
+hist(values4, breaks=50, col=rgb(1,1,0,0.5), add=TRUE)
+
+legend("topright", legend=c("UAV", "ALS", "TLS", "Backpack"), fill=c(rgb(1,0,0,0.5), rgb(0,0,1,0.5), rgb(0,1,0,0.5), rgb(1,1,0,0.5)))
+
+
+
+# DIFFERENCE OF ALS - UAV
+
+# run linear model to check relationship
+lm_model <- lm(vals_als[valid] ~ vals_uav[valid])
 summary(lm_model)
-# Residuals:
-#   Min      1Q  Median      3Q     Max 
-# -32.956   1.595   2.023   2.421   3.544 
-# 
-# Coefficients:
-#                          Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)              19.46768    0.17868  108.95   <2e-16 ***
-# as.matrix(lai_uav_rast)  0.64704     0.07463    8.67   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 6.381 on 8481 degrees of freedom
-# (2197 Beobachtungen als fehlend gelöscht)
-# Multiple R-squared:  0.008786,	Adjusted R-squared:  0.008669 
-# F-statistic: 75.17 on 1 and 8481 DF,  p-value: < 2.2e-16
+
+vals_df <- data.frame(
+  als = vals_als,
+  uav = vals_uav
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_als , y = lai_uav))+
+  geom_jitter()
+
+# difference map
+diff_raster_als_uav <- lai_als - lai_uav
+x <- plot(diff_raster_als_uav, main = "ALS - UAV LAI")
 
 
+global(diff_raster_als_uav, fun = mean, na.rm=TRUE)
+global(diff_raster_als_uav, fun = sd, na.rm=TRUE)
 
-# Canopy Cover
-cc_als <- raster("als/forest_metrics_lidar360/ALS_first_last_merged_shifted_CanopyCover.tif")
-plot(cc_als)
-cc_uav <- raster("uav/forest_metrics_LiDAR360/UAV_feb2_shifted_clipped_CanopyCover.tif")
-plot(cc_uav)
+# extract diff raster values
+vals_diff <- values(diff_raster_als_uav)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
 
-cc_uav_resampled <- resample(cc_uav, cc_als, method = "bilinear")
+# summary statistics
+mean(vals_diff_clean)
+# [1] 0.06898218
+sd(vals_diff_clean)
+# [1] 0.2236109
+median(vals_diff_clean)
+# [1] 0.08160442
+range(vals_diff_clean)
+# [1] -0.8046358  0.9674797
 
-stack_metrics <- stack(cc_uav_resampled, cc_als)
-cor_matrix <- layerStats(stack_metrics, 'pearson', na.rm = TRUE)
-# pearson correlation coefficient
-#         UAV CC       ALS CC
-# UAV CC  1.0000000    0.3107444
-# ALS CC  0.3107444    1.0000000
-#
-# mean
-# UAV CC        ALS CC 
-# 0.4912051     0.6175862 
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_als[valid] - vals_uav[valid])^2))
+# [1] 0.2340453
 
-plot(cc_als-cc_uav_resampled, main = "Difference Map")
-spplot(stack_metrics, col.regions = heat.colors(100))
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_als[valid] - vals_uav[valid]))
+# [1] 0.1857849
 
-corr_coeff <- cor_matrix$`pearson correlation coefficient`[2,1]
-# [1] 0.3107444
+# paired t-test
+t.test(vals_als[valid], vals_uav[valid], paired=TRUE)
 
-p_value <- corLocal(cc_uav_resampled, cc_als, test = TRUE)[[2]]
-plot(p_value)
-
-cellStats(abs(cc_als - cc_uav_resampled), mean)
-# [1] 0.1749809
-
-cc_uav_rast <- rast(cc_uav_resampled)
-cc_als_rast <- rast(cc_als)
-cc_difference <- raster.change(cc_als_rast, cc_uav_rast, s = 5, stat ="t.test")
-plot(cc_difference)
-
-lm_model <- lm(as.matrix(cc_als_rast) ~ as.matrix(cc_uav_rast))
+# correlation 
+lm_model <- lm(vals_als[valid] ~ vals_uav[valid])
 summary(lm_model)
 
-# Residuals:
-#   Min       1Q   Median       3Q      Max 
-# -0.51866 -0.11326  0.01373  0.12254  0.57201 
-# 
-# Coefficients:
-#                          Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)              0.408054   0.005997   68.05   <2e-16 ***
-# as.matrix(cc_uav_rast)   0.407749   0.011206   36.39   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 0.1679 on 9636 degrees of freedom
-# (1736 Beobachtungen als fehlend gelöscht)
-# Multiple R-squared:  0.1208,	Adjusted R-squared:  0.1207 
-# F-statistic:  1324 on 1 and 9636 DF,  p-value: < 2.2e-16
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - UAV)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_als[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
 
 
 
 
+# DIFFERENCE OF ALS - TLS
 
-# gap fraction
-gf_als <- raster("als/forest_metrics_lidar360/ALS_first_last_merged_shifted_GapFraction.tif")
-plot(gf_als)
-gf_uav <- raster("uav/forest_metrics_LiDAR360/UAV_feb2_shifted_clipped_GapFraction.tif")
-plot(gf_uav)
-
-gf_uav_resampled <- resample(gf_uav, gf_als, method = "bilinear")
-plot(gf_uav_resampled)
-
-stack_metrics <- stack(gf_uav_resampled, gf_als)
-cor_matrix <- layerStats(stack_metrics, 'pearson', na.rm = TRUE)
-# pearson correlation coefficient
-#         UAV GF       ALS GF
-# UAV GF  1.0000000    0.5146394
-# ALS GF  0.5146394    1.0000000
-# 
-# mean
-# UAV GF       ALS GF 
-# 0.5124771    0.4542397 
-
-corr_coeff <- cor_matrix$`pearson correlation coefficient`[2,1]
-# [1] 0.5146394
-
-p_value <- corLocal(gf_uav_resampled, gf_als, test = TRUE)[[2]]
-plot(p_value)
-
-cellStats(abs(gf_als - gf_uav_resampled), mean)
-# [1] 0.1773367
-
-gf_uav_rast <- rast(gf_uav_resampled)
-gf_als_rast <- rast(gf_als)
-gf_difference <- raster.change(gf_als_rast, gf_uav_rast, s = 5, stat ="t.test")
-plot(gf_difference)
-
-lm_model <- lm(as.matrix(gf_als_rast) ~ as.matrix(gf_uav_rast))
+# run linear model to check relationship
+lm_model <- lm(vals_als[valid] ~ vals_tls[valid])
 summary(lm_model)
 
-# Residuals:
-#   Min       1Q   Median       3Q      Max 
-# -0.55723 -0.14965 -0.03082  0.12317  0.76572 
-# 
-# Coefficients:
-#                        Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)            0.083750   0.006323   13.24   <2e-16 ***
-# as.matrix(gf_uav_rast) 0.716713   0.011625   61.65   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 0.2074 on 10414 degrees of freedom
-# (958 Beobachtungen als fehlend gelöscht)
-# Multiple R-squared:  0.2674,	Adjusted R-squared:  0.2673 
-# F-statistic:  3801 on 1 and 10414 DF,  p-value: < 2.2e-16
+vals_df <- data.frame(
+  als = vals_als,
+  uav = vals_tls
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_als , y = lai_tls))+
+  geom_jitter()
+
+# difference map
+diff_raster_als_tls <- lai_als - lai_tls
+plot(diff_raster_als_tls, main = "ALS - TLS LAI")
+
+global(diff_raster_als_tls, fun = mean, na.rm=TRUE)
+global(diff_raster_als_tls, fun = sd, na.rm=TRUE)
+
+# extract diff raster values
+vals_diff <- values(diff_raster_als_tls)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
+
+# summary statistics
+mean(vals_diff_clean)
+# [1] -0.04850352
+sd(vals_diff_clean)
+# [1] 0.3547301
+median(vals_diff_clean)
+# [1] -0.02990431
+range(vals_diff_clean)
+# [1] -1 1
+
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_als[valid] - vals_tls[valid])^2))
+# [1] 0.3580143
+
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_als[valid] - vals_tls[valid]))
+# [1] 0.2792997
+
+# paired t-test
+t.test(vals_als[valid], vals_tls[valid], paired=TRUE)
+
+# correlation 
+lm_model <- lm(vals_als[valid] ~ vals_tls[valid])
+summary(lm_model)
+
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - TLS)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_als[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
+
+
+
+
+# DIFFERENCE OF ALS - BP
+
+# run linear model to check relationship
+lm_model <- lm(vals_als[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+vals_df <- data.frame(
+  als = vals_als,
+  uav = vals_bp
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_als , y = lai_bp))+
+  geom_jitter()
+
+# difference map
+diff_raster_als_bp <- lai_als - lai_bp
+plot(diff_raster_als_bp, main = "ALS - Backpack LAI")
+
+global(diff_raster_als_bp, fun = mean, na.rm=TRUE)
+global(diff_raster_als_bp, fun = sd, na.rm=TRUE)
+
+# extract diff raster values
+vals_diff <- values(diff_raster_als_bp)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
+
+# summary statistics
+mean(vals_diff_clean)
+# [1] 0.2918845
+sd(vals_diff_clean)
+# [1] 0.3369165
+median(vals_diff_clean)
+# [1] 0.3333333
+range(vals_diff_clean)
+# [1] -0.917364  1.000000
+
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_als[valid] - vals_bp[valid])^2))
+# [1] 0.446307
+
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_als[valid] - vals_bp[valid]))
+# [1] 0.3781968
+
+# paired t-test
+t.test(vals_als[valid], vals_bp[valid], paired=TRUE)
+
+# correlation 
+lm_model <- lm(vals_als[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - Backpack)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_bp[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
+
+
+
+
+
+
+# DIFFERENCE OF UAV - TLS
+
+# run linear model to check relationship
+lm_model <- lm(vals_uav[valid] ~ vals_tls[valid])
+summary(lm_model)
+
+vals_df <- data.frame(
+  als = vals_uav,
+  uav = vals_tls
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_uav , y = lai_tls))+
+  geom_jitter()
+
+# difference map
+diff_raster_uav_tls <- lai_uav - lai_tls
+plot(diff_raster_uav_tls, main = "UAV - TLS LAI")
+
+global(diff_raster_uav_tls, fun = mean, na.rm=TRUE)
+global(diff_raster_uav_tls, fun = sd, na.rm=TRUE)
+
+# extract diff raster values
+vals_diff <- values(diff_raster_uav_tls)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
+
+# summary statistics
+mean(vals_diff_clean)
+# [1] -0.1176628
+sd(vals_diff_clean)
+# [1] 0.2843057
+median(vals_diff_clean)
+# [1] -0.1136974
+range(vals_diff_clean)
+# [1] -1.0000000  0.7457002
+
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_uav[valid] - vals_tls[valid])^2))
+# [1] 0.3077234
+
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_uav[valid] - vals_tls[valid]))
+# [1] 0.2414574
+
+# paired t-test
+t.test(vals_uav[valid], vals_tls[valid], paired=TRUE)
+
+# correlation 
+lm_model <- lm(vals_uav[valid] ~ vals_tls[valid])
+summary(lm_model)
+
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - Backpack)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_bp[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
+
+
+
+
+
+
+# DIFFERENCE OF UAV - BP
+
+# run linear model to check relationship
+lm_model <- lm(vals_uav[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+vals_df <- data.frame(
+  als = vals_uav,
+  uav = vals_bp
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_uav , y = lai_bp))+
+  geom_jitter()
+
+# difference map
+diff_raster_uav_bp <- lai_uav - lai_bp
+plot(diff_raster_uav_bp, main = "UAV - Backpack LAI")
+
+global(diff_raster_uav_bp, fun = mean, na.rm=TRUE)
+global(diff_raster_uav_bp, fun = sd, na.rm=TRUE)
+
+# extract diff raster values
+vals_diff <- values(diff_raster_uav_bp)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
+
+# summary statistics
+mean(vals_diff_clean)
+# [1] 0.2228306
+sd(vals_diff_clean)
+# [1] 0.2763193
+median(vals_diff_clean)
+# [1] 0.2587675
+range(vals_diff_clean)
+# [1] -0.7935506  0.8228782
+
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_uav[valid] - vals_bp[valid])^2))
+# [1] 0.3556628
+
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_uav[valid] - vals_bp[valid]))
+# [1] 0.3019674
+
+# paired t-test
+t.test(vals_uav[valid], vals_bp[valid], paired=TRUE)
+
+# correlation 
+lm_model <- lm(vals_uav[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - Backpack)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_bp[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
+
+
+
+
+
+# DIFFERENCE OF TLS - BP
+
+# run linear model to check relationship
+lm_model <- lm(vals_tls[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+vals_df <- data.frame(
+  als = vals_tls,
+  uav = vals_bp
+)
+
+vals_df <- na.omit(vals_df)
+# library(ggplot2)
+ggplot(data = vals_df, aes(x=lai_tls , y = lai_bp))+
+  geom_jitter()
+
+# difference map
+diff_raster_tls_bp <- lai_tls - lai_bp
+plot(diff_raster_tls_bp, main = "TLS - Backpack LAI")
+
+global(diff_raster_tls_bp, fun = mean, na.rm=TRUE)
+global(diff_raster_tls_bp, fun = sd, na.rm=TRUE)
+
+# extract diff raster values
+vals_diff <- values(diff_raster_tls_bp)
+vals_diff_clean <- vals_diff[!is.na(vals_diff)]
+
+# summary statistics
+mean(vals_diff_clean)
+# [1] 0.3412824
+sd(vals_diff_clean)
+# [1] 0.2707997
+median(vals_diff_clean)
+# [1] 0.3424908
+range(vals_diff_clean)
+# [1] -0.7773269  1.0000000
+
+# RSME to quantify error magnitude
+rmse <- sqrt(mean((vals_tls[valid] - vals_bp[valid])^2))
+# [1] 0.4358008
+
+# MAE (Mean absolute error)
+mae <- mean(abs(vals_tls[valid] - vals_bp[valid]))
+# [1] 0.3642269
+
+# paired t-test
+t.test(vals_tls[valid], vals_bp[valid], paired=TRUE)
+
+# correlation 
+lm_model <- lm(vals_uav[valid] ~ vals_bp[valid])
+summary(lm_model)
+
+
+# histogram of differences
+hist(vals_diff_clean,
+     breaks = 50,
+     main = "Histogram of Differences (ALS - Backpack)",
+     xlab = "Difference in LAI")
+
+# density plot
+plot(density(vals_diff_clean, na.rm=TRUE),
+     main="Density of Differences",
+     xlab="Difference in LAI")
+abline(v=0, col="red", lty=2)
+
+# scatter plot
+plot(vals_uav[valid], vals_bp[valid],
+     xlab="Scaled UAV LAI",
+     ylab="ALS LAI",
+     main="Pixel-wise Comparison")
+abline(0,1,col="red")
+
+residuals <- vals_als[valid] - vals_uav[valid]
+
+plot(residuals, main="Residuals (ALS - UAV)",
+     ylab="Difference (LAI)")
+abline(h=0, col="red", lty=2)
+
+
+
+### make values df into long format
+data <- data.frame()
+data <- rbind(data, vals_als)
+data <- cbind(data, vals_tls)
+data <- cbind(data, vals_uav)
+data <- cbind(data, vals_bp)
+
+data_long <- pivot_longer(data, cols = c("lai_als", "lai_tls", "lai_uav", "lai_bp"), names_to = "Source", values_to = "LAI")
+
+
+## Viz
+ggplot(data_long, aes(x = Source, y = LAI))+
+  geom_jitter(color = "grey",
+              alpha = 0.7,
+              size = 1)+
+  geom_boxplot(color = "darkolivegreen",
+               fill = "darkolivegreen4",
+               alpha = 0.3,
+               notch = TRUE,
+               notchwidth = 0.8,
+               outlier.colour="red",
+               outlier.fill="red",
+               outlier.size=2)+
+  labs(title = "LAI Measurement Comparison", )+
+  xlab("") +
+  ylab("LAI") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 15))
+
+# export in 6.28 6.4, cubes quadratic
+
+#### 4. pairwise comparison
+
+common_scale <- scale_fill_gradient2(
+  low = "blue",
+  mid = "white",
+  high = "red",
+  midpoint = 0,
+  limits = c(-1, 1),
+  oob = scales::squish # avoids warnings from small differences
+)
+library(dplyr)
+diff_raster_als_uav <- rename(as.data.frame(diff_raster_als_uav, xy = TRUE, na.rm = TRUE), lai_diff = lai_als)
+diff_raster_als_tls <- rename(as.data.frame(diff_raster_als_tls, xy = TRUE, na.rm = TRUE), lai_diff = lai_als)
+diff_raster_als_bp <- rename(as.data.frame(diff_raster_als_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_als)
+diff_raster_uav_tls <- rename(as.data.frame(diff_raster_uav_tls, xy = TRUE, na.rm = TRUE), lai_diff = lai_uav)
+diff_raster_uav_bp <- rename(as.data.frame(diff_raster_uav_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_uav)
+diff_raster_tls_bp <- rename(as.data.frame(diff_raster_tls_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_tls)
+
+
+a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("UAV") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"),
+        legend.position = "none")
+
+b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("TLS") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0.5), "cm"),
+        legend.position = "none")
+
+c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("Backpack") +
+  xlab("ALS")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        plot.margin = unit(c(0,0,0,0.5), "cm"),
+        legend.position = "none")
+
+d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.position = "none")
+
+e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("UAV")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.position = "none")
+
+f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = lai_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("TLS")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0.5,0,0), "cm"),
+        legend.position = "none")
+
+lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
+
+grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f, 
+             layout_matrix = lay2, widths = c(1,1,1), heights = c(1.01,0.94,1)
+             ,top = textGrob("Pairwise Comparison of LAI measurements", gp=gpar(fontsize =15))
+)
+# export in 6.28 6.4, cubes quadratic
+library(grid)
+library(tidyr)
+library(gridExtra)
+library(cowplot)
+
+
+library(patchwork)
+
+# Combine plots
+layout_patchwork <- 
+  (a | plot_spacer() | plot_spacer()) /
+  (b | d             | plot_spacer()) /
+  (c | e             | f) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Pairwise Comparison of LAI measurements",
+    theme = theme(plot.title = element_text(size = 15))
+  )
+layout_patchwork <- layout_patchwork + theme(legend.position = "right")
+
+
+
+
+
+
+
+
+layout <- "
+A##
+BD#
+CEF
+"
+combined <- (
+  a + b + c + d + e + f +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)
+
+combined +
+  plot_annotation(
+    title = "Pairwise Comparison of LAI measurements"
+  )

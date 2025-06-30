@@ -8,6 +8,7 @@
 
 library(ggplot2)
 library(tidyr)
+library(grid)
 
 setwd("E:/Sonja/Msc_Thesis/data/Metrics/")
 
@@ -18,7 +19,7 @@ uav <- read.csv2("E:/Sonja/Msc_Thesis/data/8_preprocessedData/uav/UAV_feb2_shift
 
 field[,4:35] <- NULL
 field[,1] <- NULL
-field$fieldData_DBH <- field$fieldData_DBH/pi/100
+# field$fieldData_DBH <- field$fieldData_DBH/pi/100
 
 # for(i in 1:nrow(field)){
 #   if(is.na(field$fieldData_Height[i])){
@@ -162,7 +163,7 @@ t.test(data$Height_FieldData, data$Height_UAV, paired = TRUE)
 t.test(data$Height_FieldData, data$Height_TLS, paired = TRUE)
 t.test(data$Height_UAV, data$Height_TLS, paired = TRUE)
 
-
+t.test(data$Height_TLS, data$Height_FieldData, paired = TRUE)
 
 #### 3. Correlation & Regression
 
@@ -188,7 +189,8 @@ a <- ggplot(data = data)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0,0,0.5), "cm"))
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.003\nmean difference = 1.900", hjust = "right")
 
 b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -200,7 +202,8 @@ b <- ggplot(data = data)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.000\nmean difference = 3.360", hjust = "right")
 
 c <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -211,7 +214,8 @@ c <- ggplot(data = data)+
   xlim(10,40)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.000\nmean difference = 4.290", hjust = "right")
 
 d <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -224,7 +228,8 @@ d <- ggplot(data = data)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0,0,0), "cm"))
+        plot.margin = unit(c(0,0,0,0), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.000\nmean difference = 2.356", hjust = "right")
 
 e <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -236,7 +241,8 @@ e <- ggplot(data = data)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0,0,0), "cm"))
+        plot.margin = unit(c(0,0,0,0), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.000\nmean difference = 2.397", hjust = "right")
 
 f <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -248,10 +254,11 @@ f <- ggplot(data = data)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0.5,0,0), "cm"))
+        plot.margin = unit(c(0,0.5,0,0), "cm"))+
+  annotate("text", x = 40, y = 15, label = "p-value = 0.923\nmean difference = 0.041", hjust = "right")
 
 lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
-library(grid)
+
 grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f,
              layout_matrix = lay2, widths = c(1,0.85,0.9), heights = c(1,0.9,0.95)
              ,top = textGrob("Pairwise Comparison of Height measurements [m]", gp=gpar(fontsize =15))

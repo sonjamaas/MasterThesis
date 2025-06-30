@@ -83,7 +83,12 @@ ggplot(data_long, aes(x = Source, y = CrownDiameter))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Crown Diameter measurement Comparison")
+  labs(title = "Crown Diameter measurement Comparison")+
+  xlab("") +
+  ylab("Crown Diameter [m]") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 15))
+# export in 6.28 6.4, cubes quadratic
 
 
 
@@ -138,7 +143,8 @@ a <- ggplot(data = data)+
   ylim(0, 17.5)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0,0,0.5), "cm"))
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+  annotate("text", x = 17.5, y = 2.5, label = "p-value = 0.000\nmean difference = 0.979", hjust = "right")
 
 b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -149,7 +155,8 @@ b <- ggplot(data = data)+
   xlim(0, 17.5)+
   ylim(0, 17.5)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 17.5, y = 2.5, label = "p-value = 0.000\nmean difference = 1.513", hjust = "right")
 
 c <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -161,7 +168,8 @@ c <- ggplot(data = data)+
   ylim(0, 17.5)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0.5,0,0), "cm"))
+        plot.margin = unit(c(0,0.5,0,0), "cm"))+
+  annotate("text", x = 17.5, y = 2.5, label = "p-value = 0.208\nmean difference = 0.533", hjust = "right")
 
 lay2 <- matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE)
 # library(grid)

@@ -8,6 +8,7 @@
 
 library(ggplot2)
 library(tidyr)
+library(grid)
 
 setwd("E:/Sonja/Msc_Thesis/data/Metrics/")
 
@@ -268,7 +269,8 @@ a <- ggplot(data = data)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0,0,0.5), "cm"))
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.408\nmean difference = 0.023", hjust = "right")
 
 b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -279,7 +281,8 @@ b <- ggplot(data = data)+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.225\nmean difference = 0.032", hjust = "right")
 
 c <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
@@ -291,10 +294,11 @@ c <- ggplot(data = data)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
-        plot.margin = unit(c(0,0.5,0,0), "cm"))
+        plot.margin = unit(c(0,0.5,0,0), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.039\nmean difference = 0.011", hjust = "right")
 
 lay2 <- matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE)
-library(grid)
+
 grid.arrange(a, NULL, b, c,
              layout_matrix = lay2, widths = c(1,0.93), heights = c(1,1)
              ,top = textGrob("Pairwise Comparison of DBH measurements [m]", gp=gpar(fontsize =15))

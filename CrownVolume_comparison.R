@@ -67,7 +67,12 @@ ggplot(data_long, aes(x = Source, y = CrownVolume))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Crown Volume measurement Comparison")
+  labs(title = "Crown Volume measurement Comparison")+
+  xlab("") +
+  ylab("Crown Volume [m³]") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 15))
+# export in 6.28 6.4, cubes quadratic
 
 
 
@@ -103,8 +108,9 @@ a <- ggplot(data = data)+
   xlim(0, 2000)+
   ylim(0, 2000)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
+        
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))+
+  annotate("text", x = 2000, y = 250, label = "p-value = 0.000\nmean difference = 114.270", hjust = "right")
 
 lay2 <- matrix(1:1, nrow = 1, ncol = 1, byrow = TRUE)
 # library(grid)
