@@ -83,7 +83,7 @@ ggplot(data_long, aes(x = Source, y = CrownDiameter))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Crown Diameter measurement Comparison")+
+  # labs(title = "Crown Diameter measurement Comparison")+
   xlab("") +
   ylab("Crown Diameter [m]") +
   theme_minimal()+
@@ -178,3 +178,13 @@ grid.arrange(a, NULL, b, c,
              ,top = textGrob("Pairwise Comparison of Crown Diameter measurements [m]", gp=gpar(fontsize =15))
 )
 # export in 6.28 6.4, cubes quadratic
+
+layout <- "
+A#
+BC
+"
+combined <- (
+  a+b+c +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)

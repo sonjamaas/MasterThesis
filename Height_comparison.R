@@ -107,7 +107,7 @@ ggplot(data_long, aes(x = Source, y = Height))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Height Measurement Comparison", )+
+  #labs(title = "Height Measurement Comparison", )+
   xlab("") +
   ylab("DBH [m]") +
   theme_minimal()+
@@ -264,3 +264,13 @@ grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f,
              ,top = textGrob("Pairwise Comparison of Height measurements [m]", gp=gpar(fontsize =15))
 )
 # export in 6.28 6.4, cubes quadratic
+
+layout <- "
+A#
+BC
+"
+combined <- (
+  a+b+c +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)

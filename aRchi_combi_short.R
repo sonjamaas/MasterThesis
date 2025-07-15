@@ -31,6 +31,7 @@
     library(circular)
     library(dplyr)
     library(stringr)
+    library(rTwig)
   
   ### 1.2 Load and prepare .las file
     setwd("E:/Sonja/Msc_Thesis/data/9_individualTrees/")
@@ -402,12 +403,21 @@ for (l in 1:length(valid_trees)){
   ### 3.8 Extract QSM table
     qsm_table <- archi_test@QSM
 
+    write.csv(qsm_table, "archi.csv")
 
+    qsm <- run_rtwig("archi.csv", twig_radius = 7)
+    # Plot the result
+    # plot_qsm(qsm$cylinder)
+    # b <- qsm$metrics$branch_height_dist
+    cylinder <- qsm$cylinder
+    # cylinder <- update_cylinders(cylinder)
+    prune <- prune_qsm(cylinder, diameter_cm = 7)
+    # plot_qsm(subset(prune, axis_ID == 1 & radius_cyl > 0.075))
     
 ############ 4. Identify main stem (axis_ID == 1) and extract points ###########
 
   ### 4.1 subset the QSM table for main axis (axisID = 1)
-    main_stem <- subset(qsm_table, axis_ID == 1)  
+    main_stem <- subset(prune, axis_ID == 1 & radius_cyl > 0.075)  
 
     
   ### 4.2 Extract start/end coordinates of main stem cylinders
@@ -466,7 +476,7 @@ for (l in 1:length(valid_trees)){
     stem_points <- pc[in_main_axis, ]
   
     # cat("Total main axis points found:", nrow(main_axis_points), "\n")
-  
+ 
   
   
 ############################# 5. Segment stem points ###########################
@@ -872,44 +882,48 @@ for (l in 1:length(valid_trees)){
 
 ########################### 6. Extract crown points ############################
 
-    archi_ForCrown <- build_aRchi()
-    archi_ForCrown <- add_pointcloud(archi_ForCrown, point_cloud = las)
+    crown <- subset(prune, axis_ID != 1 & radius_cyl > 0.075)
+    # plot_qsm(crown)
+    tree_metrics(prune)
     
-    
-    ### 3.3 skeletonize aRchi object and add radius
-    archi_ForCrown <- skeletonize_pc(archi_ForCrown, D = 0.5, cl_dist = 0.3, max_d = 1.5,
-                            progressive = TRUE)
-    # plot(archi_ForCrown)
-    ### 3.4 Add radius to aRchi object  
-    archi_ForCrown <- add_radius(archi_ForCrown, sec_length = 0.5, by_axis = TRUE, 
-                        method = "median")
-    
-    
-    ### 3.5 Calculate paths of the aRchi object
-    archi_test <- Make_Path(archi_ForCrown)
-    
-    
-    ### 3.6 Clean the QSM table
-    Clean_QSM(archi_test, threshold = 0.1, plotresult = FALSE)
-    qsm_table_ForCrown <- archi_ForCrown@QSM
-    
-    
-    
-    qsm_segment_summary <- qsm_table_ForCrown %>%
-      group_by(segment_ID) %>%
-      summarise(
-        axis_ID = first(axis_ID),                  # Retain axis_ID for the segment
-        branching_order = first(branching_order),  # Retain branching_order
-        total_length = sum(length, na.rm = TRUE),  # Sum length for the segment
-        mean_radius = mean(radius_cyl, na.rm = TRUE), # Mean radius for the segment
-        volume = pi * mean_radius^2 * total_length # Calculate volume as cylinder
-      )
+    # archi_ForCrown <- build_aRchi()
+    # archi_ForCrown <- add_pointcloud(archi_ForCrown, point_cloud = las)
+    # plot(qsm_table)
+    # 
+    # ### 3.3 skeletonize aRchi object and add radius
+    # archi_ForCrown <- skeletonize_pc(archi_ForCrown, D = 0.5, cl_dist = 0.3, max_d = 1.5,
+    #                         progressive = TRUE)
+    # # plot(archi_ForCrown)
+    # ### 3.4 Add radius to aRchi object  
+    # archi_ForCrown <- add_radius(archi_ForCrown, sec_length = 0.5, by_axis = TRUE, 
+    #                     method = "median")
+    # 
+    # 
+    # ### 3.5 Calculate paths of the aRchi object
+    # archi_test <- Make_Path(archi_ForCrown)
+    # 
+    # 
+    # ### 3.6 Clean the QSM table
+    # Clean_QSM(archi_test, threshold = 0.1, plotresult = FALSE)
+    # qsm_table_ForCrown <- archi_ForCrown@QSM
+    # 
+    # 
+    # 
+    # qsm_segment_summary <- qsm_table_ForCrown %>%
+    #   group_by(segment_ID) %>%
+    #   summarise(
+    #     axis_ID = first(axis_ID),                  # Retain axis_ID for the segment
+    #     branching_order = first(branching_order),  # Retain branching_order
+    #     total_length = sum(length, na.rm = TRUE),  # Sum length for the segment
+    #     mean_radius = mean(radius_cyl, na.rm = TRUE), # Mean radius for the segment
+    #     volume = pi * mean_radius^2 * total_length # Calculate volume as cylinder
+    #   )
     
     # View the result
     # print(qsm_segment_summary)
-    v <- sum(subset(qsm_segment_summary, branching_order == 2 & axis_ID > 1 & total_length >= 1 & mean_radius >= 0.15)$volume)
-
-  crown_fm <- crown_fm + v
+    # v <- sum(subset(qsm_segment_summary, branching_order == 2 & axis_ID > 1 & total_length >= 1 & mean_radius >= 0.15)$volume)
+    v <- sum(crown$volume)
+    crown_fm <- crown_fm + v
   
 ########################### 7. Make Conclusion Table ###########################
   

@@ -8,6 +8,8 @@
 
 library(ggplot2)
 library(tidyr)
+library(grid)
+library(gridExtra)
 
 setwd("E:/Sonja/Msc_Thesis/data/Metrics/")
 
@@ -83,7 +85,7 @@ ggplot(data_long, aes(x = Source, y = CrownArea))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Crown Area measurement Comparison")+
+  #labs(title = "Crown Area measurement Comparison")+
   xlab("") +
   ylab("Crown Area [m²]") +
   theme_minimal()+
@@ -172,9 +174,19 @@ c <- ggplot(data = data)+
   annotate("text", x = 200, y = 25, label = "p-value = 0.327\nmean difference = 5.630", hjust = "right")
 
 lay2 <- matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE)
-library(grid)
+
 grid.arrange(a, NULL, b, c,
              layout_matrix = lay2, widths = c(1,0.9), heights = c(1,1)
-             ,top = textGrob("Pairwise Comparison of Crown Area measurements [m²]", gp=gpar(fontsize =15))
+             # ,top = textGrob("Pairwise Comparison of Crown Area measurements [m²]", gp=gpar(fontsize =15))
 )
 # export in 6.28 6.4, cubes quadratic
+
+layout <- "
+A#
+BC
+"
+combined <- (
+  a + b + c +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)

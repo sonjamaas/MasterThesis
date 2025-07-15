@@ -2,9 +2,19 @@
 ######################## Script for LAI comparison #############################
 ################################################################################
 
-# - alignment of the data
-# - statistical comparison 
+#### Workflow ####
+# 1. Prerequisites
+# 2. Plots of original data
+# 3. Raster value comparison
+# 4. Layer summaries
+# 5. Calculate difference rasters
+# 6. Boxplots
+# 7. Pairwise comparison
 
+
+########################## 1. Prerequisites ####################################
+
+# load required libraries
 library(raster)
 library(terra)
 library(spatialEco)
@@ -15,75 +25,116 @@ library(tidyr)
 library(gridExtra)
 library(cowplot)
 library(patchwork)
+library(dplyr)
 
+# read data
 setwd("E:/Sonja/Msc_Thesis/data/Metrics/LAI_leafR")
 
-
-# LAI
 lai_uav <- rast("lai_uav_leafR.tif")
 lai_als <- rast("lai_als_leafR.tif")
 lai_tls <- rast("lai_tls_leafR.tif")
 lai_bp <- rast("lai_bp_leafR.tif")
 
-plot(lai_uav)
-ggplot(data = as.data.frame(lai_uav, xy = TRUE), aes(x = x, y = y, fill = lai_uav_leafR ))+
-  geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    name = "LAI"
-  )+
-  coord_equal() +
-  theme_minimal()+
-  labs(title = "LAI derived from UAV data", )+
-  xlab("") +
-  ylab("") +
-  theme(plot.title = element_text(size = 15))
 
-plot(lai_als)
-ggplot(data = as.data.frame(lai_als, xy = TRUE), aes(x = x, y = y, fill = lai_als_leafR ))+
-  geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    name = "LAI"
-  )+
-  coord_equal() +
-  theme_minimal()+
-  labs(title = "LAI derived from ALS data", )+
-  xlab("") +
-  ylab("") +
-  theme(plot.title = element_text(size = 15))
+########################### 2. Plots of original data ##########################
 
-plot(lai_tls)
-ggplot(data = as.data.frame(lai_tls, xy = TRUE), aes(x = x, y = y, fill = lai_tls_leafR ))+
-  geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    name = "LAI"
-  )+
-  coord_equal() +
-  theme_minimal()+
-  labs(title = "LAI derived from TLS data", )+
-  xlab("") +
-  ylab("") +
-  theme(plot.title = element_text(size = 15))
+common_scale <- scale_fill_gradient2(
+  low = "white",
+  high = "darkgreen",
+  limits = c(0, 5),
+  oob = scales::squish # avoids warnings from small differences
+)
 
-plot(lai_bp)
-ggplot(data = as.data.frame(lai_bp, xy = TRUE), aes(x = x, y = y, fill = lai_bp_leafR ))+
+lai_uav <- rename(as.data.frame(lai_uav, xy = TRUE, na.rm = TRUE), 
+                              LAI = lai_uav_leafR)
+lai_als <- rename(as.data.frame(lai_als, xy = TRUE, na.rm = TRUE), 
+                  LAI = lai_als_leafR )
+lai_tls <- rename(as.data.frame(lai_tls, xy = TRUE, na.rm = TRUE), 
+                  LAI = lai_tls_leafR )
+lai_bp <- rename(as.data.frame(lai_bp, xy = TRUE, na.rm = TRUE), 
+                  LAI = lai_bp_leafR )
+
+
+# plot(lai_uav)
+u <- ggplot(data = as.data.frame(lai_uav, xy = TRUE), 
+       aes(x = x, y = y, fill = LAI))+
   geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    name = "LAI"
-  )+
+  common_scale +
   coord_equal() +
   theme_minimal()+
-  labs(title = "LAI derived from backpack data", )+
+  #labs(title = "LAI derived from UAV data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank())+
+  annotate("text", x = 523955, y = 5537700, label = "UAV", 
+           hjust = "left")
+  
+
+# plot(lai_als)
+a <- ggplot(data = as.data.frame(lai_als, xy = TRUE), 
+       aes(x = x, y = y, fill = LAI ))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "LAI derived from ALS data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())+
+  annotate("text", x = 523955, y = 5537700, label = "ALS", 
+           hjust = "left")
+
+# plot(lai_tls)
+t <- ggplot(data = as.data.frame(lai_tls, xy = TRUE), 
+       aes(x = x, y = y, fill = LAI ))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "LAI derived from TLS data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15))+
+  annotate("text", x = 523955, y = 5537700, label = "TLS", 
+           hjust = "left")
+
+# plot(lai_bp)
+b <- ggplot(data = as.data.frame(lai_bp, xy = TRUE), 
+       aes(x = x, y = y, fill = LAI ))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "LAI derived from backpack data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15),
+        axis.text.y = element_blank())+
+  annotate("text", x = 523955, y = 5537700, label = "Backpack", 
+           hjust = "left")
+
+
+
+layout <- "
+AB
+CD
+"
+combined <- (
+  u + a + t + b +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)
+
+combined +
+  plot_annotation(
+    title = "LAI measurements"
+  )
+
+
+####################### 3. Raster value comparison #############################
 
 # extract values
 vals_uav <- values(lai_uav)
@@ -124,6 +175,7 @@ plot(vals_tls[valid], vals_bp[valid],
 abline(0, 1, col="red")
 
 
+########################### 4. Layer summaries #################################
 
 # Layer summaries
 metrics <- tibble(
@@ -174,9 +226,11 @@ hist(values2, breaks=50, col=rgb(0,0,1,0.5), add=TRUE)
 hist(values3, breaks=50, col=rgb(0,1,0,0.5), add=TRUE)
 hist(values4, breaks=50, col=rgb(1,1,0,0.5), add=TRUE)
 
-legend("topright", legend=c("UAV", "ALS", "TLS", "Backpack"), fill=c(rgb(1,0,0,0.5), rgb(0,0,1,0.5), rgb(0,1,0,0.5), rgb(1,1,0,0.5)))
+legend("topright", legend=c("UAV", "ALS", "TLS", "Backpack"), 
+       fill=c(rgb(1,0,0,0.5), rgb(0,0,1,0.5), rgb(0,1,0,0.5), rgb(1,1,0,0.5)))
 
 
+################### 5. Calculate difference rasters ############################
 
 # DIFFERENCE OF ALS - UAV
 
@@ -191,7 +245,7 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_als , y = lai_uav))+
+# ggplot(data = vals_df, aes(x=lai_als , y = lai_uav))+
   geom_tile()
 
 # difference map
@@ -274,7 +328,7 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_als , y = lai_tls))+
+# ggplot(data = vals_df, aes(x=lai_als , y = lai_tls))+
   geom_jitter()
 
 # difference map
@@ -357,8 +411,7 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_als , y = lai_bp))+
-  geom_jitter()
+# ggplot(data = vals_df, aes(x=lai_als , y = lai_bp))+geom_jitter()
 
 # difference map
 lai_bp_resampled <- resample(lai_bp, lai_als, method = "bilinear")
@@ -442,8 +495,8 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_uav , y = lai_tls))+
-  geom_jitter()
+# ggplot(data = vals_df, aes(x=lai_uav , y = lai_tls))+
+#   geom_jitter()
 
 # difference map
 lai_tls_resampled <- resample(lai_tls, lai_uav, method = "bilinear")
@@ -527,8 +580,8 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_uav , y = lai_bp))+
-  geom_jitter()
+# ggplot(data = vals_df, aes(x=lai_uav , y = lai_bp))+
+#   geom_jitter()
 
 # difference map
 lai_bp_resampled <- resample(lai_bp, lai_uav, method = "bilinear")
@@ -611,8 +664,8 @@ vals_df <- data.frame(
 
 vals_df <- na.omit(vals_df)
 # library(ggplot2)
-ggplot(data = vals_df, aes(x=lai_tls , y = lai_bp))+
-  geom_jitter()
+#ggplot(data = vals_df, aes(x=lai_tls , y = lai_bp))+
+#  geom_jitter()
 
 # difference map
 lai_bp_resampled <- resample(lai_bp, lai_tls, method = "bilinear")
@@ -679,6 +732,7 @@ plot(residuals, main="Residuals (ALS - UAV)",
 abline(h=0, col="red", lty=2)
 
 
+################################ 6. Boxplots ###################################
 
 ### make values df into long format
 data <- data.frame()
@@ -687,7 +741,9 @@ data <- cbind(data, vals_tls)
 data <- cbind(data, vals_uav)
 data <- cbind(data, vals_bp)
 
-data_long <- pivot_longer(data, cols = c("lai_als_leafR", "lai_tls_leafR", "lai_uav_leafR", "lai_bp_leafR"), names_to = "Source", values_to = "LAI")
+data_long <- pivot_longer(data, cols = c("lai_als_leafR", "lai_tls_leafR", 
+                                         "lai_uav_leafR", "lai_bp_leafR"), 
+                          names_to = "Source", values_to = "LAI")
 
 
 ## Viz
@@ -711,7 +767,7 @@ ggplot(data_long, aes(x = Source, y = LAI))+
 
 # export in 6.28 6.4, cubes quadratic
 
-#### 4. pairwise comparison
+######################### 7. pairwise comparison ###############################
 
 common_scale <- scale_fill_gradient2(
   low = "blue",
@@ -721,14 +777,25 @@ common_scale <- scale_fill_gradient2(
   limits = c(-3, 6),
   oob = scales::squish # avoids warnings from small differences
 )
-library(dplyr)
-diff_raster_als_uav <- rename(as.data.frame(diff_raster_als_uav, xy = TRUE, na.rm = TRUE), lai_diff = lai_als_leafR)
-diff_raster_als_tls <- rename(as.data.frame(diff_raster_als_tls, xy = TRUE, na.rm = TRUE), lai_diff = lai_als_leafR)
-diff_raster_als_bp <- rename(as.data.frame(diff_raster_als_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_als_leafR)
-diff_raster_uav_tls <- rename(as.data.frame(diff_raster_uav_tls, xy = TRUE, na.rm = TRUE), lai_diff = lai_uav_leafR )
-diff_raster_uav_bp <- rename(as.data.frame(diff_raster_uav_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_uav_leafR )
-diff_raster_tls_bp <- rename(as.data.frame(diff_raster_tls_bp, xy = TRUE, na.rm = TRUE), lai_diff = lai_tls_leafR)
 
+diff_raster_als_uav <- rename(as.data.frame(diff_raster_als_uav, 
+                                            xy = TRUE, na.rm = TRUE), 
+                              lai_diff = "LAI Difference")
+diff_raster_als_tls <- rename(as.data.frame(diff_raster_als_tls, 
+                                            xy = TRUE, na.rm = TRUE), 
+                              lai_diff = "LAI Difference")
+diff_raster_als_bp <- rename(as.data.frame(diff_raster_als_bp, 
+                                           xy = TRUE, na.rm = TRUE), 
+                             lai_diff = "LAI Difference")
+diff_raster_uav_tls <- rename(as.data.frame(diff_raster_uav_tls, 
+                                            xy = TRUE, na.rm = TRUE), 
+                              lai_diff = "LAI Difference" )
+diff_raster_uav_bp <- rename(as.data.frame(diff_raster_uav_bp, 
+                                           xy = TRUE, na.rm = TRUE), 
+                             lai_diff = "LAI Difference" )
+diff_raster_tls_bp <- rename(as.data.frame(diff_raster_tls_bp, 
+                                           xy = TRUE, na.rm = TRUE), 
+                             lai_diff = "LAI Difference")
 
 a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = lai_diff))+
   geom_tile()+
@@ -741,7 +808,8 @@ a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = lai_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - UAV", hjust = "right")
+  annotate("text", x = 524020, y = 5537700, 
+           label = "ALS - UAV", hjust = "right")
 
 b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = lai_diff))+
   geom_tile()+
@@ -766,7 +834,8 @@ c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = lai_diff))+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - Backpack", hjust = "right")
+  annotate("text", x = 524020, y = 5537700, label = "ALS - Backpack", 
+           hjust = "right")
 
 d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = lai_diff))+
   geom_tile()+
@@ -780,7 +849,8 @@ d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = lai_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - TLS", hjust = "right")
+  annotate("text", x = 524020, y = 5537700, label = "UAV - TLS", 
+           hjust = "right")
 
 e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = lai_diff))+
   geom_tile()+
@@ -793,7 +863,8 @@ e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = lai_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - Backpack", hjust = "right")
+  annotate("text", x = 524020, y = 5537700, label = "UAV - Backpack", 
+           hjust = "right")
 
 f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = lai_diff))+
   geom_tile()+
@@ -806,16 +877,8 @@ f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = lai_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "TLS - Backpack", hjust = "right")
-
-# lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
-# 
-# grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f, 
-#              layout_matrix = lay2, widths = c(1,1,1), heights = c(1.01,0.94,1)
-#              ,top = textGrob("Pairwise Comparison of LAI measurements", gp=gpar(fontsize =15))
-# )
-# export in 6.28 6.4, cubes quadratic
-
+  annotate("text", x = 524020, y = 5537700, label = "TLS - Backpack", 
+           hjust = "right")
 
 layout <- "
 A##

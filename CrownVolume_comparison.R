@@ -67,7 +67,7 @@ ggplot(data_long, aes(x = Source, y = CrownVolume))+
                outlier.colour="red",
                outlier.fill="red",
                outlier.size=4)+
-  labs(title = "Crown Volume measurement Comparison")+
+  #labs(title = "Crown Volume measurement Comparison")+
   xlab("") +
   ylab("Crown Volume [m³]") +
   theme_minimal()+
@@ -116,6 +116,6 @@ lay2 <- matrix(1:1, nrow = 1, ncol = 1, byrow = TRUE)
 # library(grid)
 grid.arrange(a,
              layout_matrix = lay2, widths = c(1), heights = c(1)
-             ,top = textGrob("Comparison of Crown Volume measurements [m³]", gp=gpar(fontsize =15))
+             #,top = textGrob("Comparison of Crown Volume measurements [m³]", gp=gpar(fontsize =15))
 )
-a>s# export in 6.28 6.4, cubes quadratic
+# export in 6.28 6.4, cubes quadratic

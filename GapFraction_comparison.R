@@ -1,6 +1,6 @@
 ############## Script for comparing gap fraction rasters #######################
 
-setwd("E:/Sonja/Msc_Thesis/data/Metrics/GapFraction/")
+setwd("D:/Sonja/Msc_Thesis/data/Metrics/GapFraction/")
 
 
 # LAI
@@ -11,69 +11,104 @@ gf_bp <- rast("gf_bp.tif")
 
 plot(gf_tls)
 
-plot(gf_uav)
-ggplot(data = as.data.frame(gf_uav, xy = TRUE), aes(x = x, y = y, fill = gf_uav))+
+
+common_scale <- scale_fill_gradient2(
+  low = "white",
+  high = "darkgreen",
+  limits = c(0, 1),
+  oob = scales::squish # avoids warnings from small differences
+)
+
+gf_uav <- rename(as.data.frame(gf_uav, xy = TRUE, na.rm = TRUE), 
+                    GapFraction = gf_uav)
+gf_als <- rename(as.data.frame(gf_als, xy = TRUE, na.rm = TRUE), 
+                 GapFraction = gf_als )
+gf_tls <- rename(as.data.frame(gf_tls, xy = TRUE, na.rm = TRUE), 
+                 GapFraction = gf_tls )
+gf_bp <- rename(as.data.frame(gf_bp, xy = TRUE, na.rm = TRUE), 
+                GapFraction = gf_bp )
+
+
+u <- ggplot(data = as.data.frame(gf_uav, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    limits = c(0,1),
-    name = "Gap Fraction"
-  )+
+  common_scale +
   coord_equal() +
   theme_minimal()+
-  labs(title = "Gap Fracion derived from UAV data", )+
+  #labs(title = "Gap Fracion derived from UAV data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank())+
+  annotate("rect", xmin = 523954, xmax = 523963, ymin = 5537697.5, ymax = 5537702, fill = "white")+
+  annotate("text", x = 523955, y = 5537700, label = "UAV", 
+           hjust = "left")+ 
+  labs(fill = 'Gap Fraction')
 
 plot(gf_als)
-ggplot(data = as.data.frame(gf_als, xy = TRUE), aes(x = x, y = y, fill = gf_als))+
+a <- ggplot(data = as.data.frame(gf_als, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    limits = c(0,1),
-    name = "Gap Fraction"
-  )+
+  common_scale +
   coord_equal() +
   theme_minimal()+
-  labs(title = "Gap Fracion derived from ALS data", )+
+  #labs(title = "Gap Fracion derived from ALS data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())+
+  annotate("rect", xmin = 523954, xmax = 523962, ymin = 5537697.5, ymax = 5537702, fill = "white")+
+  annotate("text", x = 523955, y = 5537700, label = "ALS", 
+           hjust = "left")+
+  labs(fill = 'Gap Fraction')
 
 plot(gf_tls)
-ggplot(data = as.data.frame(gf_tls, xy = TRUE), aes(x = x, y = y, fill = gf_tls))+
+t <- ggplot(data = as.data.frame(gf_tls, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    limits = c(0,1),
-    name = "Gap Fraction"
-  )+
+  common_scale +
   coord_equal() +
   theme_minimal()+
-  labs(title = "Gap Fracion derived from TLS data", )+
+  #labs(title = "Gap Fracion derived from TLS data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 15))+
+  annotate("rect", xmin = 523954, xmax = 523962, ymin = 5537697.5, ymax = 5537702, fill = "white")+
+  annotate("text", x = 523955, y = 5537700, label = "TLS", 
+           hjust = "left")+ 
+  labs(fill = 'Gap Fraction')
 
 plot(gf_bp)
-ggplot(data = as.data.frame(gf_bp, xy = TRUE), aes(x = x, y = y, fill = gf_bp))+
+b <- ggplot(data = as.data.frame(gf_bp, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
-  scale_fill_gradient(
-    low = "white",
-    high = "darkgreen",
-    limits = c(0,1),
-    name = "Gap Fraction"
-  )+
+  common_scale +
   coord_equal() +
   theme_minimal()+
-  labs(title = "Gap Fracion derived from Backpack data", )+
+  #labs(title = "Gap Fracion derived from Backpack data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 15),
+        axis.text.y = element_blank())+
+  annotate("rect", xmin = 523954, xmax = 523972, ymin = 5537697.5, ymax = 5537702, fill = "white")+
+  annotate("text", x = 523955, y = 5537700, label = "Backpack", 
+           hjust = "left")+ 
+  labs(fill = 'Gap Fraction')
+
+
+
+layout <- "
+AB
+CD
+"
+combined <- (
+  u + a + t + b +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)
+
+combined +
+  plot_annotation(
+    title = "Gap Fraction measurements"
+  )
+
 
 
 
@@ -389,7 +424,7 @@ a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = gf_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - UAV", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "ALS - UAV", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -402,7 +437,7 @@ b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = gf_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - TLS", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "ALS - TLS", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -414,7 +449,7 @@ c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = gf_diff))+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "ALS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 
 d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = gf_diff))+
@@ -429,7 +464,7 @@ d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - TLS", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "UAV - TLS", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -442,7 +477,7 @@ e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "UAV - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -455,7 +490,7 @@ f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "TLS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction')
+  annotate("text", x = 524020, y = 5537700, label = "TLS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
 
 # lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
 # 
