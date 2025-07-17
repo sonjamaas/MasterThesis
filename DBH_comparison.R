@@ -9,11 +9,15 @@
 library(ggplot2)
 library(tidyr)
 library(grid)
+library(patchwork)
+library(fmsb)
 
 setwd("E:/Sonja/Msc_Thesis/data/Metrics/")
 
 bp <- read.csv2("bp/Tree_segmentation_LiDAR360/bp_feb5.csv")
+bp_summer <- read.csv2("bp/Tree_segmentation_LiDAR360/bp_jul2.csv")
 tls <- read.csv("tls/tree_segmentation_LiDAR360/tls_winter.csv")
+tls_summer <- read.csv2("tls/tree_segmentation_LiDAR360/tls_summer.csv")
 field <- read.csv2("allData.csv")
 field[,6:35] <- NULL
 field[,1] <- NULL
@@ -25,8 +29,16 @@ tls[,3:5] <- NULL
 tls[,4:6] <- NULL
 tls[,1] <- NULL
 
+tls_summer[,3:5] <- NULL
+tls_summer[,4:6] <- NULL
+tls_summer[,1] <- NULL
+tls_summer[,1] <- NULL
+
 bp[,1:5] <- NULL
 bp[,2:4] <- NULL
+
+bp_summer[,1:5] <- NULL
+bp_summer[,2:4] <- NULL
 
 
 # for(i in 1:nrow(field)){
@@ -38,9 +50,15 @@ bp[,2:4] <- NULL
 data <- merge(bp, tls, by.x = "NewID", by.y = "TreeID")
 data <- merge(data, field, by.x = "NewID", by.y = "NewTreeID" )
 colnames(data) <- c("TreeID", "DBH_BP", "DBH_TLS", "DBH_Field")
+data <- merge(data, bp_summer, by.x = "TreeID", by.y = "NewID" )
+data <- merge(data, tls_summer, by.x = "TreeID", by.y = "PreviousID" )
+colnames(data) <- c("TreeID", "Backpack Winter", "TLS Winter", "Field Data", "Backpack Summer", "TLS Summer")
+
 
 data$DBH_BP <- as.numeric(data$DBH_BP)
-data_long <- pivot_longer(data, cols = c("DBH_BP", "DBH_TLS", "DBH_Field"), names_to = "Source", values_to = "DBH")
+data$DBH_BP_summer <- as.numeric(data$DBH_BP_summer)
+data$DBH_TLS_summer <- as.numeric(data$DBH_TLS_summer)
+data_long <- pivot_longer(data, cols = c("Backpack Winter", "TLS Winter", "Field Data", "Backpack Summer", "TLS Summer"), names_to = "Source", values_to = "DBH")
 
 
 #### 1. Descriptive statistics
@@ -53,6 +71,9 @@ tls_mean <- mean(as.numeric(data$DBH_TLS))
 # [1] 0.4881705
 field_mean <- mean(na.omit(data$DBH_Field))
 # [1] 0.4844098
+bp_mean_s <- mean(na.omit(data$DBH_BP_summer))
+tls_mean_s <- mean(as.numeric(data$DBH_TLS_summer))
+
 
 ## Median
 bp_median <- median(na.omit(data$DBH_BP))
@@ -61,6 +82,8 @@ tls_median <- median(as.numeric(data$DBH_TLS))
 # [1] 0.469
 field_median <- median(na.omit(data$DBH_Field))
 # [1] 0.4901972
+bp_median_s <- median(na.omit(data$DBH_BP_summer))
+tls_median_s <- median(as.numeric(data$DBH_TLS_summer))
 
 
 ## Standard Deviation
@@ -70,14 +93,19 @@ tls_sd <- sd(as.numeric(data$DBH_TLS))
 # [1] 0.1181976
 field_sd <- sd(na.omit(data$DBH_Field))
 # [1] 0.1101464
+bp_sd_s <- sd(na.omit(data$DBH_BP_s))
+tls_sd_s <- sd(as.numeric(data$DBH_TLS_summer))
 
-## Range
+## Range## RangeDBH_TLS_summer
 bp_range <- range(na.omit(data$DBH_BP))
 # [1] 0.147 0.819
 tls_range <- range(as.numeric(data$DBH_TLS))
 # [1] 0.186 0.807
 field_range <- range(na.omit(data$DBH_Field))
 # [1] 0.2005352 0.7639437
+bp_range_s <- range(na.omit(data$DBH_BP_summer))
+tls_range_s <- range(as.numeric(data$DBH_TLS_summer))
+
 
 ## Viz
 ggplot(data_long, aes(x = Source, y = DBH))+
@@ -213,20 +241,67 @@ grid.arrange(NULL, NULL, bp_tls, hist1, NULL, NULL, bp_field, hist2, NULL, NULL,
 qqnorm(differences)
 qqline(differences)
 
-t.test(dbh_data$DBH_BP, dbh_data$DBH_TLS, paired = TRUE)
+t.test(data$`Backpack Winter`, data$`TLS Winter`, paired = TRUE)
 # Paired t-test
 # 
-# data:  dbh_data$DBH_BP and dbh_data$DBH_TLS
-# t = -2.0994, df = 91, p-value = 0.03855
+# data:  data$`Backpack Winter` and data$`TLS Winter`
+# t = -4.5697, df = 88, p-value = 1.584e-05
 # alternative hypothesis: true mean difference is not equal to 0
 # 95 percent confidence interval:
-#   -0.0207519097 -0.0005741773
+#   -0.02977791 -0.01172770
 # sample estimates:
 #   mean difference 
-# -0.01066304
+# -0.02075281
 
-t.test(dbh_data_full$DBH_BP, dbh_data_full$DBH_Field, paired = TRUE)
-t.test(dbh_data_full$DBH_TLS, dbh_data_full$DBH_Field, paired = TRUE)
+t.test(data$`Backpack Winter`, data$`Field Data`, paired = TRUE)
+# data:  data$`Backpack Winter` and data$`Field Data`
+# t = -3.6291, df = 32, p-value = 0.0009802
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#   -0.04435541 -0.01246414
+# sample estimates:
+#   mean difference 
+# -0.02840977
+
+t.test(data$`TLS Winter`, data$`Field Data`, paired = TRUE)
+# data:  data$`TLS Winter` and data$`Field Data`
+# t = 0.068393, df = 32, p-value = 0.9459
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#   -0.01001071  0.01070632
+# sample estimates:
+#   mean difference 
+# 0.0003478035 
+
+t.test(data$`Backpack Summer`, data$`TLS Summer`, paired = TRUE)
+# data:  data$`Backpack Summer` and data$`TLS Summer`
+# t = 0.84181, df = 88, p-value = 0.4022
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#   -0.01152791  0.02847173
+# sample estimates:
+#   mean difference 
+# 0.00847191 
+
+t.test(data$`Backpack Summer`, data$`Field Data`, paired = TRUE)
+# data:  data$`Backpack Summer` and data$`Field Data`
+# t = 1.4707, df = 32, p-value = 0.1511
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#   -0.009188023  0.056913933
+# sample estimates:
+#   mean difference 
+# 0.02386296 
+
+t.test(data$`TLS Summer`, data$`Field Data`, paired = TRUE)
+# data:  data$`TLS Summer` and data$`Field Data`
+# t = 0.60484, df = 32, p-value = 0.5496
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#   -0.008859506  0.016342992
+# sample estimates:
+#   mean difference 
+# 0.003741743 
 
 
 
@@ -259,57 +334,142 @@ summary.lm(lm)
 
 #### 4. pairwise plots
 
+# plots for winter comparison
+
 a <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
-  geom_point(aes(x = DBH_Field, y = DBH_BP), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  geom_point(aes(x = `Field Data` , y = `Backpack Winter`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
   theme_minimal() +
-  ylab("DBH Backpack") +
-  xlab("")+
+  ylab("Backpack") +
+  xlab("Field Data")+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
-  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.408\nmean difference = 0.023", hjust = "right")
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 9.802e-4\nmean difference = 0.028", hjust = "right")
 
 b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
-  geom_point(aes(x = DBH_Field, y = DBH_TLS), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  geom_point(aes(x = `Field Data`, y = `TLS Winter`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
   theme_minimal() +
-  ylab("DBH TLS") +
-  xlab("DBH Field")+
+  ylab("TLS") +
+  xlab("")+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"))+
-  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.225\nmean difference = 0.032", hjust = "right")
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.946\nmean difference = 3.478e-4", hjust = "right")
 
 c <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
-  geom_point(aes(x = DBH_TLS, y = DBH_BP), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  geom_point(aes(x = `TLS Winter`, y = `Backpack Winter`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
   theme_minimal() +
   ylab("") +
-  xlab("DBH TLS")+
+  xlab("TLS")+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"))+
-  annotate("text", x = 0.8, y = 0.1, label = "p-value = 0.039\nmean difference = 0.011", hjust = "right")
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 1.584e-5\nmean difference = 0.021", hjust = "right")
 
-lay2 <- matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE)
-
-grid.arrange(a, NULL, b, c,
-             layout_matrix = lay2, widths = c(1,0.93), heights = c(1,1)
-             ,top = textGrob("Pairwise Comparison of DBH measurements [m]", gp=gpar(fontsize =15))
-)
 # export in 6.28 6.4, cubes quadratic
 layout <- "
 A#
 BC
 "
 combined <- (
-  a+b+c +
+  b+a+c +
     plot_layout(design = layout, guides = "collect") &
     theme(legend.position = "right")
 )
+
+
+# for summer
+
+a <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = `Field Data` , y = `Backpack Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("Backpack") +
+  xlab("Field Data")+
+  xlim(0,0.8)+
+  ylim(0, 0.8)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.151\nmean difference = 0.024", hjust = "right")
+
+b <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = `Field Data`, y = `TLS Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("TLS") +
+  xlab("")+
+  xlim(0,0.8)+
+  ylim(0, 0.8)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.550\nmean difference = 0.004", hjust = "right")
+
+c <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = `TLS Summer`, y = `Backpack Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("") +
+  xlab("TLS")+
+  xlim(0,0.8)+
+  ylim(0, 0.8)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0.5,0,0), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.402\nmean difference = 0.008", hjust = "right")
+
+# export in 6.28 6.4, cubes quadratic
+layout <- "
+A#
+BC
+"
+combined <- (
+  b+a+c +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)
+
+
+
+# compare summer and winter for individual sensors
+# backpack
+t.test(data$`Backpack Summer`, data$`Backpack Winter`, paired = TRUE)
+
+a <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = `Backpack Winter` , y = `Backpack Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("Backpack Summer") +
+  xlab("Backpack Winter")+
+  xlim(0,0.8)+
+  ylim(0, 0.8)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0.5,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.003\nmean difference = 0.030", hjust = "right")
+
+
+# backpack
+t.test(data$`TLS Summer`, data$`TLS Winter`, paired = TRUE)
+
+a <- ggplot(data = data)+
+  geom_abline(col = "grey", linewidth = 1)+
+  geom_point(aes(x = `TLS Winter` , y = `TLS Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
+  theme_minimal() +
+  ylab("TLS Summer") +
+  xlab("TLS Winter")+
+  xlim(0,0.8)+
+  ylim(0, 0.8)+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0.5,0,0.5), "cm"))+
+  annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.665\nmean difference = 0.001", hjust = "right")
+

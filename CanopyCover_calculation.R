@@ -20,8 +20,12 @@ setwd("E:/Sonja/Msc_Thesis/data/8_preprocessedData/")
 
 las_bp <- 
   readLAS("bp/backpack_feb5_subsampled_0_05_Normalize by Ground Points.las")
+las_bp_jul <- 
+  readLAS("bp/bp_jul2_Noise Filter_Remove Outliers_Normalize by Ground Points.las")
 las_uav <- 
   readLAS("uav/UAV_feb2_shifted_clipped.las")
+#las_uav_jul <- 
+#  readLAS("uav/UAV_feb2_shifted_clipped.las")
 las_als <- 
   readLAS("als/ALS_first_last_merged_shifted.las")
 las_tls <- 
