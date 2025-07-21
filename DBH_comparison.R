@@ -55,9 +55,9 @@ data <- merge(data, tls_summer, by.x = "TreeID", by.y = "PreviousID" )
 colnames(data) <- c("TreeID", "Backpack Winter", "TLS Winter", "Field Data", "Backpack Summer", "TLS Summer")
 
 
-data$DBH_BP <- as.numeric(data$DBH_BP)
-data$DBH_BP_summer <- as.numeric(data$DBH_BP_summer)
-data$DBH_TLS_summer <- as.numeric(data$DBH_TLS_summer)
+data$`Backpack Winter` <- as.numeric(data$`Backpack Winter`)
+data$`Backpack Summer` <- as.numeric(data$`Backpack Summer`)
+data$`TLS Summer` <- as.numeric(data$`TLS Summer`)
 data_long <- pivot_longer(data, cols = c("Backpack Winter", "TLS Winter", "Field Data", "Backpack Summer", "TLS Summer"), names_to = "Source", values_to = "DBH")
 
 
@@ -65,46 +65,54 @@ data_long <- pivot_longer(data, cols = c("Backpack Winter", "TLS Winter", "Field
 
 
 ## Mean
-bp_mean <- mean(na.omit(data$DBH_BP))
+bp_mean <- mean(na.omit(data$`Backpack Winter`))
 # [1] 0.4671705
-tls_mean <- mean(as.numeric(data$DBH_TLS))
-# [1] 0.4881705
-field_mean <- mean(na.omit(data$DBH_Field))
-# [1] 0.4844098
-bp_mean_s <- mean(na.omit(data$DBH_BP_summer))
-tls_mean_s <- mean(as.numeric(data$DBH_TLS_summer))
+tls_mean <- mean(as.numeric(data$`TLS Winter`))
+# [1] 0.488
+field_mean <- mean(na.omit(data$`Field Data`))
+# [1] 0.484
+bp_mean_s <- mean(na.omit(data$`Backpack Summer`))
+tls_mean_s <- mean(as.numeric(data$`TLS Summer`))
 
 
 ## Median
-bp_median <- median(na.omit(data$DBH_BP))
+bp_median <- median(na.omit(data$`Backpack Winter`))
 # [1] 0.462
-tls_median <- median(as.numeric(data$DBH_TLS))
-# [1] 0.469
-field_median <- median(na.omit(data$DBH_Field))
+tls_median <- median(as.numeric(data$`TLS Winter`))
+# [1] 0.47
+field_median <- median(na.omit(data$`Field Data`))
 # [1] 0.4901972
-bp_median_s <- median(na.omit(data$DBH_BP_summer))
-tls_median_s <- median(as.numeric(data$DBH_TLS_summer))
+bp_median_s <- median(na.omit(data$`Backpack Summer`))
+tls_median_s <- median(as.numeric(data$`TLS Summer`))
 
 
 ## Standard Deviation
-bp_sd <- sd(na.omit(data$DBH_BP))
-# [1] 0.1371365
-tls_sd <- sd(as.numeric(data$DBH_TLS))
-# [1] 0.1181976
-field_sd <- sd(na.omit(data$DBH_Field))
+bp_sd <- sd(na.omit(data$`Backpack Winter`))
+# [1] 0.1363557
+tls_sd <- sd(as.numeric(data$`TLS Winter`))
+# [1] 0.117
+field_sd <- sd(na.omit(data$`Field Data`))
 # [1] 0.1101464
-bp_sd_s <- sd(na.omit(data$DBH_BP_s))
-tls_sd_s <- sd(as.numeric(data$DBH_TLS_summer))
+bp_sd_s <- sd(na.omit(data$`Backpack Summer`))
+tls_sd_s <- sd(as.numeric(data$`TLS Summer`))
 
 ## Range## RangeDBH_TLS_summer
-bp_range <- range(na.omit(data$DBH_BP))
+bp_range <- range(na.omit(data$`Backpack Winter`))
 # [1] 0.147 0.819
-tls_range <- range(as.numeric(data$DBH_TLS))
+tls_range <- range(as.numeric(data$`TLS Winter`))
 # [1] 0.186 0.807
-field_range <- range(na.omit(data$DBH_Field))
+field_range <- range(na.omit(data$`Field Data`))
 # [1] 0.2005352 0.7639437
-bp_range_s <- range(na.omit(data$DBH_BP_summer))
-tls_range_s <- range(as.numeric(data$DBH_TLS_summer))
+bp_range_s <- range(na.omit(data$`Backpack Summer`))
+tls_range_s <- range(as.numeric(data$`TLS Summer`))
+
+desc_stats <- data.frame(mean = c(bp_mean, bp_mean_s, tls_mean, tls_mean_s, field_mean),
+                         median = c(bp_median, bp_median_s, tls_median, tls_median_s, field_median),
+                         range_min = c(bp_range[[1]], bp_range_s[[1]], tls_range[[1]], tls_range_s[[1]], field_range[[1]]),
+                         range_max = c(bp_range[[2]], bp_range_s[[2]], tls_range[[2]], tls_range_s[[2]], field_range[[2]]),
+                         sd = c(bp_sd, bp_sd_s, tls_sd, tls_sd_s, field_sd))
+
+rownames(desc_stats) <- c("Backpack Winter", "Backpack Summer", "TLS Winter", "TLS Summer", "Field Data")
 
 
 ## Viz
@@ -452,7 +460,7 @@ a <- ggplot(data = data)+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        axis.text.x = element_blank(),
+        #axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0.5,0,0.5), "cm"))+
   annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.003\nmean difference = 0.030", hjust = "right")
 
@@ -460,7 +468,7 @@ a <- ggplot(data = data)+
 # backpack
 t.test(data$`TLS Summer`, data$`TLS Winter`, paired = TRUE)
 
-a <- ggplot(data = data)+
+b <- ggplot(data = data)+
   geom_abline(col = "grey", linewidth = 1)+
   geom_point(aes(x = `TLS Winter` , y = `TLS Summer`), color = "darkolivegreen", fill = "darkolivegreen3", alpha = 0.6, shape = 21, size = 4)+
   theme_minimal() +
@@ -469,7 +477,16 @@ a <- ggplot(data = data)+
   xlim(0,0.8)+
   ylim(0, 0.8)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        axis.text.x = element_blank(),
+        #axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0.5,0,0.5), "cm"))+
   annotate("text", x = 0.8, y = 0.1, label = "Paired t-test:\np-value = 0.665\nmean difference = 0.001", hjust = "right")
+
+layout <- "
+AB
+"
+combined <- (
+  a+b+
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right")
+)
 
