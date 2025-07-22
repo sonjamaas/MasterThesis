@@ -593,8 +593,8 @@ a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - UAV", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - UAV", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = canopy_diff))+
@@ -608,8 +608,8 @@ b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - TLS", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - TLS", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = canopy_diff))+
@@ -622,8 +622,8 @@ c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = canopy_diff))+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 
@@ -639,8 +639,8 @@ d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "UAV - TLS", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - TLS", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = canopy_diff))+
@@ -654,8 +654,8 @@ e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "UAV - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = canopy_diff))+
@@ -669,8 +669,8 @@ f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "TLS - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "TLS - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 # define layout
@@ -725,8 +725,8 @@ a <- ggplot(data = diff_raster_als_uav_s, aes(x = x, y = y, fill = canopy_diff))
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - UAV", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - UAV", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 b <- ggplot(data = diff_raster_als_tls_s, aes(x = x, y = y, fill = canopy_diff))+
@@ -740,8 +740,8 @@ b <- ggplot(data = diff_raster_als_tls_s, aes(x = x, y = y, fill = canopy_diff))
         axis.text.x = element_blank(),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - TLS", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - TLS", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 c <- ggplot(data = diff_raster_als_bp_s, aes(x = x, y = y, fill = canopy_diff))+
@@ -754,8 +754,8 @@ c <- ggplot(data = diff_raster_als_bp_s, aes(x = x, y = y, fill = canopy_diff))+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "ALS - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 
@@ -771,8 +771,8 @@ d <- ggplot(data = diff_raster_uav_tls_s, aes(x = x, y = y, fill = canopy_diff))
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "UAV - TLS", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - TLS", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 e <- ggplot(data = diff_raster_uav_bp_s, aes(x = x, y = y, fill = canopy_diff))+
@@ -786,8 +786,8 @@ e <- ggplot(data = diff_raster_uav_bp_s, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "UAV - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 f <- ggplot(data = diff_raster_tls_bp_s, aes(x = x, y = y, fill = canopy_diff))+
@@ -801,8 +801,8 @@ f <- ggplot(data = diff_raster_tls_bp_s, aes(x = x, y = y, fill = canopy_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("label", x = 524020, y = 5537700, 
-           label = "TLS - Backpack", hjust = "right", fill = "white")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "TLS - Backpack", hjust = "left", fill = "white")+ 
   labs(fill = 'Canopy Cover\nDifference [%]')
 
 # define layout

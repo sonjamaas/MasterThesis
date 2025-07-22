@@ -1,15 +1,21 @@
 ############## Script for comparing gap fraction rasters #######################
 
-setwd("D:/Sonja/Msc_Thesis/data/Metrics/GapFraction/")
+setwd("E:/Sonja/Msc_Thesis/data/Metrics/GapFraction/")
 
+library(terra)
+library(dplyr)
+library(patchwork)
 
-# LAI
+# Gap fraction
 gf_uav <- rast("gf_uav.tif")
 gf_als <- rast("gf_als.tif")
 gf_tls <- rast("gf_tls.tif")
 gf_bp <- rast("gf_bp.tif")
+gf_uav_s <- rast("gf_uav_s.tif")
+gf_bp_s <- rast("gf_bp_s.tif")
+gf_tls_s <- rast("gf_tls_s.tif")
 
-plot(gf_tls)
+# plot(gf_tls)
 
 
 common_scale <- scale_fill_gradient2(
@@ -27,7 +33,14 @@ gf_tls <- rename(as.data.frame(gf_tls, xy = TRUE, na.rm = TRUE),
                  GapFraction = gf_tls )
 gf_bp <- rename(as.data.frame(gf_bp, xy = TRUE, na.rm = TRUE), 
                 GapFraction = gf_bp )
+gf_uav_s <- rename(as.data.frame(gf_uav_s, xy = TRUE, na.rm = TRUE), 
+                 GapFraction = gf_uav_s)
+gf_bp_s <- rename(as.data.frame(gf_bp_s, xy = TRUE, na.rm = TRUE), 
+                 GapFraction = gf_bp_s)
+gf_tls_s <- rename(as.data.frame(gf_tls_s, xy = TRUE, na.rm = TRUE), 
+                 GapFraction = gf_tls_s)
 
+# plot measurements
 
 u <- ggplot(data = as.data.frame(gf_uav, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
@@ -39,12 +52,25 @@ u <- ggplot(data = as.data.frame(gf_uav, xy = TRUE), aes(x = x, y = y, fill = Ga
   ylab("") +
   theme(plot.title = element_text(size = 15),
         axis.text.x = element_blank())+
-  annotate("rect", xmin = 523954, xmax = 523963, ymin = 5537697.5, ymax = 5537702, fill = "white")+
-  annotate("text", x = 523955, y = 5537700, label = "UAV", 
-           hjust = "left")+ 
+  annotate("label", x = 523955, y = 5537700, label = "UAV Winter", 
+           hjust = "left", fill = "white")+ 
   labs(fill = 'Gap Fraction')
 
-plot(gf_als)
+u_s <- ggplot(data = as.data.frame(gf_uav_s, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "Gap Fracion derived from UAV data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())+
+  annotate("label", x = 523955, y = 5537700, label = "UAV Summer", 
+           hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction')
+
 a <- ggplot(data = as.data.frame(gf_als, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
   common_scale +
@@ -53,15 +79,14 @@ a <- ggplot(data = as.data.frame(gf_als, xy = TRUE), aes(x = x, y = y, fill = Ga
   #labs(title = "Gap Fracion derived from ALS data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15),
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank())+
-  annotate("rect", xmin = 523954, xmax = 523962, ymin = 5537697.5, ymax = 5537702, fill = "white")+
-  annotate("text", x = 523955, y = 5537700, label = "ALS", 
-           hjust = "left")+
+  theme(plot.title = element_text(size = 15)
+        #axis.text.x = element_blank(),
+        #axis.text.y = element_blank()
+        )+
+  annotate("label", x = 523955, y = 5537700, label = "ALS", 
+           hjust = "left", fill = "white")+ 
   labs(fill = 'Gap Fraction')
 
-plot(gf_tls)
 t <- ggplot(data = as.data.frame(gf_tls, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
   common_scale +
@@ -70,13 +95,27 @@ t <- ggplot(data = as.data.frame(gf_tls, xy = TRUE), aes(x = x, y = y, fill = Ga
   #labs(title = "Gap Fracion derived from TLS data", )+
   xlab("") +
   ylab("") +
-  theme(plot.title = element_text(size = 15))+
-  annotate("rect", xmin = 523954, xmax = 523962, ymin = 5537697.5, ymax = 5537702, fill = "white")+
-  annotate("text", x = 523955, y = 5537700, label = "TLS", 
-           hjust = "left")+ 
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank())+
+  annotate("label", x = 523955, y = 5537700, label = "TLS Winter", 
+           hjust = "left", fill = "white")+ 
   labs(fill = 'Gap Fraction')
 
-plot(gf_bp)
+t_s <- ggplot(data = as.data.frame(gf_tls_s, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "Gap Fracion derived from TLS data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())+
+  annotate("label", x = 523955, y = 5537700, label = "TLS Summer", 
+           hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction')
+
 b <- ggplot(data = as.data.frame(gf_bp, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
   geom_tile()+
   common_scale +
@@ -86,10 +125,23 @@ b <- ggplot(data = as.data.frame(gf_bp, xy = TRUE), aes(x = x, y = y, fill = Gap
   xlab("") +
   ylab("") +
   theme(plot.title = element_text(size = 15),
+        axis.text.x = element_blank())+
+  annotate("label", x = 523955, y = 5537700, label = "Backpack Winter", 
+           hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction')
+
+b_s <- ggplot(data = as.data.frame(gf_bp_s, xy = TRUE), aes(x = x, y = y, fill = GapFraction))+
+  geom_tile()+
+  common_scale +
+  coord_equal() +
+  theme_minimal()+
+  #labs(title = "Gap Fracion derived from Backpack data", )+
+  xlab("") +
+  ylab("") +
+  theme(plot.title = element_text(size = 15),
         axis.text.y = element_blank())+
-  annotate("rect", xmin = 523954, xmax = 523972, ymin = 5537697.5, ymax = 5537702, fill = "white")+
-  annotate("text", x = 523955, y = 5537700, label = "Backpack", 
-           hjust = "left")+ 
+  annotate("label", x = 523955, y = 5537700, label = "Backpack Summer", 
+           hjust = "left", fill = "white")+ 
   labs(fill = 'Gap Fraction')
 
 
@@ -97,18 +149,16 @@ b <- ggplot(data = as.data.frame(gf_bp, xy = TRUE), aes(x = x, y = y, fill = Gap
 layout <- "
 AB
 CD
+EF
+G#
 "
 combined <- (
-  u + a + t + b +
+  u + u_s + t + t_s + b + b_s + a +
     plot_layout(design = layout, guides = "collect") &
-    theme(legend.position = "right")
+    theme(legend.position = "bottom")
 )
 
-combined +
-  plot_annotation(
-    title = "Gap Fraction measurements"
-  )
-
+# export: 6.8x9.7
 
 
 
@@ -119,47 +169,60 @@ vals_tls <- values(gf_tls)
 vals_bp <- values(gf_bp)
 valid <- complete.cases(vals_uav, vals_als, vals_bp, vals_tls)
 
+vals_uav_s <- values(gf_uav_s)
+vals_als <- values(gf_als)
+vals_tls_s <- values(gf_tls_s)
+vals_bp_s <- values(gf_bp_s)
+valid_s <- complete.cases(vals_uav_s, vals_als, vals_bp_s, vals_tls_s)
+
 # plot values to check them
-plot(vals_uav[valid], vals_als[valid],
-     xlab="UAV GF", ylab="ALS GF",
-     main="Pixel-wise Comparison (UAV + ALS)")
-abline(0, 1, col="red")
-
-plot(vals_uav[valid], vals_tls[valid],
-     xlab="UAV GF", ylab="TLS GF",
-     main="Pixel-wise Comparison (UAV + TLS)")
-abline(0, 1, col="red")
-
-plot(vals_uav[valid], vals_bp[valid],
-     xlab="UAV GF", ylab="Backpack GF",
-     main="Pixel-wise Comparison (UAV + Backpack)")
-abline(0, 1, col="red")
-
-plot(vals_als[valid], vals_tls[valid],
-     xlab="ALS Cover", ylab="TLS Cover",
-     main="Pixel-wise Comparison (ALS + TLS)")
-abline(0, 1, col="red")
-
-plot(vals_als[valid], vals_bp[valid],
-     xlab="ALS Cover", ylab="Backpack Cover",
-     main="Pixel-wise Comparison (ALS + Backpack)")
-abline(0, 1, col="red")
-
-plot(vals_tls[valid], vals_bp[valid],
-     xlab="TLS Cover", ylab="Backpack Cover",
-     main="Pixel-wise Comparison (TLS + Backpack)")
-abline(0, 1, col="red")
+# plot(vals_uav[valid], vals_als[valid],
+#      xlab="UAV GF", ylab="ALS GF",
+#      main="Pixel-wise Comparison (UAV + ALS)")
+# abline(0, 1, col="red")
+# 
+# plot(vals_uav[valid], vals_tls[valid],
+#      xlab="UAV GF", ylab="TLS GF",
+#      main="Pixel-wise Comparison (UAV + TLS)")
+# abline(0, 1, col="red")
+# 
+# plot(vals_uav[valid], vals_bp[valid],
+#      xlab="UAV GF", ylab="Backpack GF",
+#      main="Pixel-wise Comparison (UAV + Backpack)")
+# abline(0, 1, col="red")
+# 
+# plot(vals_als[valid], vals_tls[valid],
+#      xlab="ALS Cover", ylab="TLS Cover",
+#      main="Pixel-wise Comparison (ALS + TLS)")
+# abline(0, 1, col="red")
+# 
+# plot(vals_als[valid], vals_bp[valid],
+#      xlab="ALS Cover", ylab="Backpack Cover",
+#      main="Pixel-wise Comparison (ALS + Backpack)")
+# abline(0, 1, col="red")
+# 
+# plot(vals_tls[valid], vals_bp[valid],
+#      xlab="TLS Cover", ylab="Backpack Cover",
+#      main="Pixel-wise Comparison (TLS + Backpack)")
+# abline(0, 1, col="red")
 
 
 # Layer summaries
 metrics <- tibble(
   Metric = c("Mean", "Median", "SD", "Min", "Max"),
-  UAV = c(
+  UAV_winter = c(
     global(gf_uav, mean, na.rm = TRUE)[[1]],
     global(gf_uav, median, na.rm = TRUE)[[1]],
     global(gf_uav, sd, na.rm = TRUE)[[1]],
     global(gf_uav, range, na.rm = TRUE)[1],
     global(gf_uav, range, na.rm = TRUE)[2]
+  ),
+  UAV_summer = c(
+    global(gf_uav_s, mean, na.rm = TRUE)[[1]],
+    global(gf_uav_s, median, na.rm = TRUE)[[1]],
+    global(gf_uav_s, sd, na.rm = TRUE)[[1]],
+    global(gf_uav_s, range, na.rm = TRUE)[1],
+    global(gf_uav_s, range, na.rm = TRUE)[2]
   ),
   ALS = c(
     global(gf_als, mean, na.rm = TRUE)[[1]],
@@ -168,44 +231,39 @@ metrics <- tibble(
     global(gf_als, range, na.rm = TRUE)[1],
     global(gf_als, range, na.rm = TRUE)[2]
   ),
-  TLS = c(
+  TLS_winter = c(
     global(gf_tls, mean, na.rm = TRUE)[[1]],
     global(gf_tls, median, na.rm = TRUE)[[1]],
     global(gf_tls, sd, na.rm = TRUE)[[1]],
     global(gf_tls, range, na.rm = TRUE)[1],
     global(gf_tls, range, na.rm = TRUE)[2]
   ),
-  BP = c(
+  TLS_summer = c(
+    global(gf_tls_s, mean, na.rm = TRUE)[[1]],
+    global(gf_tls_s, median, na.rm = TRUE)[[1]],
+    global(gf_tls_s, sd, na.rm = TRUE)[[1]],
+    global(gf_tls_s, range, na.rm = TRUE)[1],
+    global(gf_tls_s, range, na.rm = TRUE)[2]
+  ),
+  BP_winter = c(
     global(gf_bp, mean, na.rm = TRUE)[[1]],
     global(gf_bp, median, na.rm = TRUE)[[1]],
     global(gf_bp, sd, na.rm = TRUE)[[1]],
     global(gf_bp, range, na.rm = TRUE)[1],
     global(gf_bp, range, na.rm = TRUE)[2]
+  ),
+  BP_summer = c(
+    global(gf_bp_s, mean, na.rm = TRUE)[[1]],
+    global(gf_bp_s, median, na.rm = TRUE)[[1]],
+    global(gf_bp_s, sd, na.rm = TRUE)[[1]],
+    global(gf_bp_s, range, na.rm = TRUE)[1],
+    global(gf_bp_s, range, na.rm = TRUE)[2]
   )
 )
 
 print(metrics)
 
 
-
-
-
-
-# DIFFERENCE OF ALS - UAV
-
-# run linear model to check relationship
-lm_model_als_uav <- lm(vals_als[valid] ~ vals_uav[valid])
-summary(lm_model_als_uav)
-
-vals_df_als_uav <- data.frame(
-  als = vals_als,
-  uav = vals_uav
-)
-
-vals_df_als_uav <- na.omit(vals_df_als_uav)
-# library(ggplot2)
-ggplot(data = vals_df_als_uav, aes(x=cover_als , y = cover_uav))+
-  geom_tile()
 
 # difference map
 gf_uav_resampled <- resample(gf_uav, gf_als, method = "bilinear")
@@ -215,6 +273,12 @@ gf_tls_resampled2 <- resample(gf_tls, gf_uav, method = "bilinear")
 gf_bp_resampled2 <- resample(gf_bp, gf_uav, method = "bilinear")
 gf_bp_resampled3 <- resample(gf_bp, gf_tls, method = "bilinear")
 
+gf_uav_s_resampled <- resample(gf_uav_s, gf_als, method = "bilinear")
+gf_tls_s_resampled <- resample(gf_tls_s, gf_als, method = "bilinear")
+gf_bp_s_resampled <- resample(gf_bp_s, gf_als, method = "bilinear")
+gf_tls_s_resampled2 <- resample(gf_tls_s, gf_uav_s, method = "bilinear")
+gf_bp_s_resampled2 <- resample(gf_bp_s, gf_uav_s, method = "bilinear")
+gf_bp_s_resampled3 <- resample(gf_bp_s, gf_tls_s, method = "bilinear")
 
 
 diff_raster_als_uav <- gf_als - gf_uav_resampled
@@ -224,12 +288,14 @@ diff_raster_uav_tls <- gf_uav - gf_tls_resampled2
 diff_raster_uav_bp <- gf_uav - gf_bp_resampled2
 diff_raster_tls_bp <- gf_tls - gf_bp_resampled3
 
+diff_raster_als_uav_s <- gf_als - gf_uav_s_resampled
+diff_raster_als_tls_s <- gf_als - gf_tls_s_resampled
+diff_raster_als_bp_s <- gf_als - gf_tls_s_resampled
+diff_raster_uav_tls_s <- gf_uav_s - gf_tls_s_resampled2
+diff_raster_uav_bp_s <- gf_uav_s - gf_bp_s_resampled2
+diff_raster_tls_bp_s <- gf_tls_s - gf_bp_s_resampled3
 
-x <- plot(diff_raster_als_uav, main = "ALS - UAV LAI")
 
-
-global(diff_raster_als_uav, fun = mean, na.rm=TRUE)
-global(diff_raster_als_uav, fun = sd, na.rm=TRUE)
 
 # extract diff raster values
 vals_diff_als_uav <- values(diff_raster_als_uav)
@@ -239,6 +305,13 @@ vals_diff_uav_tls <- values(diff_raster_uav_tls)
 vals_diff_uav_bp <- values(diff_raster_uav_bp)
 vals_diff_tls_bp <- values(diff_raster_tls_bp)
 
+vals_diff_als_uav_s <- values(diff_raster_als_uav_s)
+vals_diff_als_tls_s <- values(diff_raster_als_tls_s)
+vals_diff_als_bp_s <- values(diff_raster_als_bp_s)
+vals_diff_uav_tls_s <- values(diff_raster_uav_tls_s)
+vals_diff_uav_bp_s <- values(diff_raster_uav_bp_s)
+vals_diff_tls_bp_s <- values(diff_raster_tls_bp_s)
+
 vals_diff_clean_als_uav <- vals_diff_als_uav[!is.na(vals_diff_als_uav)]
 vals_diff_clean_als_tls <- vals_diff_als_tls[!is.na(vals_diff_als_tls)]
 vals_diff_clean_als_bp <- vals_diff_als_bp[!is.na(vals_diff_als_bp)]
@@ -246,8 +319,15 @@ vals_diff_clean_uav_tls <- vals_diff_uav_tls[!is.na(vals_diff_uav_tls)]
 vals_diff_clean_uav_bp <- vals_diff_uav_bp[!is.na(vals_diff_uav_bp)]
 vals_diff_clean_tls_bp <- vals_diff_tls_bp[!is.na(vals_diff_tls_bp)]
 
+vals_diff_clean_als_uav_s <- vals_diff_als_uav_s[!is.na(vals_diff_als_uav_s)]
+vals_diff_clean_als_tls_s <- vals_diff_als_tls_s[!is.na(vals_diff_als_tls_s)]
+vals_diff_clean_als_bp_s <- vals_diff_als_bp_s[!is.na(vals_diff_als_bp_s)]
+vals_diff_clean_uav_tls_s <- vals_diff_uav_tls_s[!is.na(vals_diff_uav_tls_s)]
+vals_diff_clean_uav_bp_s <- vals_diff_uav_bp_s[!is.na(vals_diff_uav_bp_s)]
+vals_diff_clean_tls_bp_s <- vals_diff_tls_bp_s[!is.na(vals_diff_tls_bp_s)]
 
-metrics_combi <- tibble(
+
+metrics_combi_winter <- tibble(
   Metric = c("Mean", "Median", "SD", "Range Min", "Range Max", "RSME", "MAE"),
   ALS_UAV = c(
     mean(vals_diff_clean_als_uav)[[1]],
@@ -305,13 +385,67 @@ metrics_combi <- tibble(
   )
 )
 
-print(metrics)
+print(metrics_combi_winter)
 
+metrics_combi_summer <- tibble(
+  Metric = c("Mean", "Median", "SD", "Range Min", "Range Max", "RSME", "MAE"),
+  ALS_UAV = c(
+    mean(vals_diff_clean_als_uav_s)[[1]],
+    median(vals_diff_clean_als_uav_s)[[1]],
+    sd(vals_diff_clean_als_uav_s)[[1]],
+    range(vals_diff_clean_als_uav_s)[1],
+    range(vals_diff_clean_als_uav_s)[2],
+    sqrt(mean((vals_als[valid_s] - vals_uav_s[valid_s])^2)),
+    mean(abs(vals_als[valid_s] - vals_uav_s[valid_s]))
+  ),
+  ALS_TLS = c(
+    mean(vals_diff_clean_als_tls_s)[[1]],
+    median(vals_diff_clean_als_tls_s)[[1]],
+    sd(vals_diff_clean_als_tls_s)[[1]],
+    range(vals_diff_clean_als_tls_s)[1],
+    range(vals_diff_clean_als_tls_s)[2],
+    sqrt(mean((vals_als[valid_s] - vals_tls_s[valid_s])^2)),
+    mean(abs(vals_als[valid_s] - vals_tls_s[valid_s]))
+  ),
+  ALS_BP = c(
+    mean(vals_diff_clean_als_bp_s)[[1]],
+    median(vals_diff_clean_als_bp_s)[[1]],
+    sd(vals_diff_clean_als_bp_s)[[1]],
+    range(vals_diff_clean_als_bp_s)[1],
+    range(vals_diff_clean_als_bp_s)[2],
+    sqrt(mean((vals_als[valid_s] - vals_bp_s[valid_s])^2)),
+    mean(abs(vals_als[valid_s] - vals_bp_s[valid_s]))
+  ),
+  UAV_TLS = c(
+    mean(vals_diff_clean_uav_tls_s)[[1]],
+    median(vals_diff_clean_uav_tls_s)[[1]],
+    sd(vals_diff_clean_uav_tls_s)[[1]],
+    range(vals_diff_clean_uav_tls_s)[1],
+    range(vals_diff_clean_uav_tls_s)[2],
+    sqrt(mean((vals_uav_s[valid_s] - vals_tls_s[valid_s])^2)),
+    mean(abs(vals_uav_s[valid_s] - vals_tls_s[valid_s]))
+  ),
+  UAV_BP = c(
+    mean(vals_diff_clean_uav_bp_s)[[1]],
+    median(vals_diff_clean_uav_bp_s)[[1]],
+    sd(vals_diff_clean_uav_bp_s)[[1]],
+    range(vals_diff_clean_uav_bp_s)[1],
+    range(vals_diff_clean_uav_bp_s)[2],
+    sqrt(mean((vals_uav_s[valid_s] - vals_bp_s[valid_s])^2)),
+    mean(abs(vals_uav_s[valid_s] - vals_bp_s[valid_s]))
+  ),
+  TLS_BP = c(
+    mean(vals_diff_clean_tls_bp_s)[[1]],
+    median(vals_diff_clean_tls_bp_s)[[1]],
+    sd(vals_diff_clean_tls_bp_s)[[1]],
+    range(vals_diff_clean_tls_bp_s)[1],
+    range(vals_diff_clean_tls_bp_s)[2],
+    sqrt(mean((vals_tls_s[valid_s] - vals_bp_s[valid_s])^2)),
+    mean(abs(vals_tls_s[valid_s] - vals_bp_s[valid_s]))
+  )
+)
 
-
-
-
-
+print(metrics_combi_summer)
 
 
 
@@ -323,41 +457,12 @@ t.test(vals_uav[valid], vals_tls[valid], paired=TRUE)
 t.test(vals_uav[valid], vals_bp[valid], paired=TRUE)
 t.test(vals_tls[valid], vals_bp[valid], paired=TRUE)
 
-
-# correlation 
-lm_model <- lm(vals_als[valid] ~ vals_uav[valid])
-summary(lm_model)
-
-
-# histogram of differences
-hist(vals_diff_clean,
-     breaks = 50,
-     main = "Histogram of Differences (ALS - UAV)",
-     xlab = "Difference in LAI")
-
-# density plot
-plot(density(vals_diff_clean, na.rm=TRUE),
-     main="Density of Differences",
-     xlab="Difference in LAI")
-abline(v=0, col="red", lty=2)
-
-# scatter plot
-plot(vals_uav[valid], vals_als[valid],
-     xlab="Scaled UAV LAI",
-     ylab="ALS LAI",
-     main="Pixel-wise Comparison")
-abline(0,1,col="red")
-
-residuals <- vals_als[valid] - vals_uav[valid]
-
-plot(residuals, main="Residuals (ALS - UAV)",
-     ylab="Difference (LAI)")
-abline(h=0, col="red", lty=2)
-
-
-
-
-
+t.test(vals_als[valid_s], vals_uav_s[valid_s], paired=TRUE)
+t.test(vals_als[valid_s], vals_tls_s[valid_s], paired=TRUE)
+t.test(vals_als[valid_s], vals_bp_s[valid_s], paired=TRUE)
+t.test(vals_uav_s[valid_s], vals_tls_s[valid_s], paired=TRUE)
+t.test(vals_uav_s[valid_s], vals_bp_s[valid_s], paired=TRUE)
+t.test(vals_tls_s[valid_s], vals_bp_s[valid_s], paired=TRUE)
 
 
 
@@ -394,7 +499,7 @@ ggplot(data_long, aes(x = Source, y = gf))+
 
 
 
-#### 4. pairwise comparison
+#### 4. pairwise comparison for winter data
 
 common_scale <- scale_fill_gradient2(
   low = "blue",
@@ -404,7 +509,7 @@ common_scale <- scale_fill_gradient2(
   limits = c(-1, 1),
   oob = scales::squish # avoids warnings from small differences
 )
-library(dplyr)
+
 diff_raster_als_uav <- rename(as.data.frame(diff_raster_als_uav, xy = TRUE, na.rm = TRUE), gf_diff = gf_als )
 diff_raster_als_tls <- rename(as.data.frame(diff_raster_als_tls, xy = TRUE, na.rm = TRUE), gf_diff = gf_als )
 diff_raster_als_bp <- rename(as.data.frame(diff_raster_als_bp, xy = TRUE, na.rm = TRUE), gf_diff = gf_als )
@@ -424,7 +529,8 @@ a <- ggplot(data = diff_raster_als_uav, aes(x = x, y = y, fill = gf_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0.5,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - UAV", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700,, label = "ALS - UAV", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
 b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -437,7 +543,8 @@ b <- ggplot(data = diff_raster_als_tls, aes(x = x, y = y, fill = gf_diff))+
         axis.text.x = element_blank(),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - TLS", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700, label = "ALS - TLS", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
 c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -449,7 +556,8 @@ c <- ggplot(data = diff_raster_als_bp, aes(x = x, y = y, fill = gf_diff))+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         plot.margin = unit(c(0,0,0,0.5), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "ALS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700, label = "ALS - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
 
 d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = gf_diff))+
@@ -464,7 +572,8 @@ d <- ggplot(data = diff_raster_uav_tls, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - TLS", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700, label = "UAV - TLS", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
 e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -477,7 +586,8 @@ e <- ggplot(data = diff_raster_uav_bp, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "UAV - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700, label = "UAV - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
 f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = gf_diff))+
   geom_tile()+
@@ -490,14 +600,10 @@ f <- ggplot(data = diff_raster_tls_bp, aes(x = x, y = y, fill = gf_diff))+
         axis.text.y = element_blank(),
         plot.margin = unit(c(0,0.5,0,0), "cm"),
         legend.position = "none")+ 
-  annotate("text", x = 524020, y = 5537700, label = "TLS - Backpack", hjust = "right")+ labs(fill = 'Gap Fraction\nDifference')
+  annotate("label", x = 523955, y = 5537700, label = "TLS - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
 
-# lay2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
-# 
-# grid.arrange(a, NULL, NULL, b, d, NULL, c, e, f, 
-#              layout_matrix = lay2, widths = c(1,1,1), heights = c(1.01,0.94,1)
-#              ,top = textGrob("Pairwise Comparison of LAI measurements", gp=gpar(fontsize =15))
-# )
+
 # export in 6.28 6.4, cubes quadratic
 
 
@@ -517,4 +623,128 @@ combined +
     title = "Pairwise Comparison of Gap Fraction measurements"
   )
 
+# for summer data
+diff_raster_als_uav_s <- rename(as.data.frame(diff_raster_als_uav_s, 
+                                              xy = TRUE, na.rm = TRUE), 
+                                canopy_diff = gf_als )
+diff_raster_als_tls_s <- rename(as.data.frame(diff_raster_als_tls_s, 
+                                              xy = TRUE, na.rm = TRUE), 
+                                canopy_diff = gf_als )
+diff_raster_als_bp_s <- rename(as.data.frame(diff_raster_als_bp_s, 
+                                             xy = TRUE, na.rm = TRUE), 
+                               canopy_diff = gf_als )
+diff_raster_uav_tls_s <- rename(as.data.frame(diff_raster_uav_tls_s, 
+                                              xy = TRUE, na.rm = TRUE), 
+                                canopy_diff = gf_uav_s )
+diff_raster_uav_bp_s <- rename(as.data.frame(diff_raster_uav_bp_s, 
+                                             xy = TRUE, na.rm = TRUE), 
+                               canopy_diff = gf_uav_s )
+diff_raster_tls_bp_s <- rename(as.data.frame(diff_raster_tls_bp_s, 
+                                             xy = TRUE, na.rm = TRUE), 
+                               canopy_diff = gf_tls_s )
+
+a <- ggplot(data = diff_raster_als_uav_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("UAV") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - UAV", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+b <- ggplot(data = diff_raster_als_tls_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("TLS") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0.5), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - TLS", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+c <- ggplot(data = diff_raster_als_bp_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("Backpack") +
+  xlab("ALS")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        plot.margin = unit(c(0,0,0,0.5), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "ALS - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+
+d <- ggplot(data = diff_raster_uav_tls_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - TLS", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+e <- ggplot(data = diff_raster_uav_bp_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("UAV")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "UAV - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+f <- ggplot(data = diff_raster_tls_bp_s, aes(x = x, y = y, fill = canopy_diff))+
+  geom_tile()+
+  coord_equal() +
+  ylab("") +
+  xlab("TLS")+
+  common_scale +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0,0.5,0,0), "cm"),
+        legend.position = "none")+ 
+  annotate("label", x = 523955, y = 5537700, 
+           label = "TLS - Backpack", hjust = "left", fill = "white")+ 
+  labs(fill = 'Gap Fraction\nDifference')
+
+# define layout
+layout <- "
+A##
+BD#
+CEF
+"
+
+# make one plot
+combined <- (
+  a + b + c + d + e + f +
+    plot_layout(design = layout, guides = "collect") &
+    theme(legend.position = "right") 
+)
 

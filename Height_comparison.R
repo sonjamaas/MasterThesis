@@ -332,8 +332,8 @@ a <- ggplot(data = data)+
   xlim(10,40)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        axis.text.x = element_blank(),
-        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
+        #axis.text.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0.5), "cm"))+
   annotate("text", x = 40, y = 15, label = "Paired t-test:\np-value = 0.002\nmean difference = 3.173", hjust = "right")
 
 b <- ggplot(data = data)+
@@ -346,7 +346,7 @@ b <- ggplot(data = data)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+        plot.margin = unit(c(0.5,0,0,0.5), "cm"))+
   annotate("text", x = 40, y = 15, label = "Paired t-test:\np-value = 0.003\nmean difference = 2.608", hjust = "right")
 
 c <- ggplot(data = data)+
@@ -358,7 +358,8 @@ c <- ggplot(data = data)+
   xlim(10,40)+
   ylim(10, 40)+
   theme(panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.5),
-        plot.margin = unit(c(0,0,0,0.5), "cm"))+
+        plot.margin = unit(c(0,0.5,0,0), "cm"),
+        axis.text.y = element_blank())+
   annotate("text", x = 40, y = 15, label = "Paired t-test:\np-value = 3.953e-15\nmean difference = 6.904", hjust = "right")
 
 
